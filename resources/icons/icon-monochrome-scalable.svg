@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+    <rect x="32" y="32" width="448" height="448" rx="96" fill="currentColor"></rect>
+    <rect x="120" y="140" width="272" height="232" rx="24" fill="none" stroke="white"
+        stroke-width="20"></rect>
+    <rect x="120" y="140" width="36" height="232" rx="12" fill="white"></rect>
+    <text x="256" y="255" font-family="Noto Sans JP, Hiragino Sans, Arial, sans-serif"
+        font-size="72" text-anchor="middle" fill="white" font-weight="700">
+        簡
+    </text>
+    <text x="256" y="325" font-family="Noto Sans JP, Hiragino Sans, Arial, sans-serif"
+        font-size="72" text-anchor="middle" fill="white" font-weight="700">
+        単
+    </text>
+    <circle cx="360" cy="180" r="12" fill="white"></circle>
+</svg>
