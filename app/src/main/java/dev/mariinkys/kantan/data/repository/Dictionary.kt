@@ -72,6 +72,9 @@ class DictionaryRepositoryImpl @Inject constructor(
         return words.joinToString(" ") { "\"$it\" OR $it*" }
     }
 
+    override suspend fun getEntryById(id: Long): DictionaryEntry? =
+        termDao.getById(id)?.toDomain()
+
     override suspend fun getKanji(character: String): KanjiEntry? =
         kanjiDao.getByCharacter(character)?.toDomain()
 

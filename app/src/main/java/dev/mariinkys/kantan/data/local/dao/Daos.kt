@@ -17,6 +17,9 @@ interface TermDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertFts(entries: List<TermFtsEntity>)
 
+    @Query("SELECT * FROM terms WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): TermEntity?
+
     /**
      * Prefix search for Japanese / romaji-converted kana input.
      *

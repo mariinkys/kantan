@@ -81,7 +81,7 @@ object KanjiVGParser {
      */
     private fun svgPathDataToAndroidPath(d: String): Path? = runCatching {
         val path = Path()
-        // Tokenise: split on command letters, keeping the letter
+        // Tokenize: split on command letters, keeping the letter
         val tokenRegex = Regex("""[MLCSZmlcsz]|[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?""")
         val tokens = tokenRegex.findAll(d).map { it.value }.toList()
         var i = 0
@@ -167,11 +167,4 @@ object KanjiVGParser {
         }
         path
     }.getOrNull()
-}
-
-data class StrokeData(
-    val paths: List<Path>,
-    val totalStrokes: Int = paths.size
-) {
-    val isEmpty get() = paths.isEmpty()
 }
