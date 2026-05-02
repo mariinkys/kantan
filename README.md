@@ -3,10 +3,9 @@
   <img alt="App Icon" src="./resources/icons/icon-scalable.svg" width="120" />
   <h1>Kantan</h1>
 
-![GitHub License](https://img.shields.io/github/license/mariinkys/OpenPillReminder)
-![GitHub Repo Stars](https://img.shields.io/github/stars/mariinkys/OpenPillReminder)
-![GitHub Release](https://img.shields.io/github/v/release/mariinkys/OpenPillReminder)
-![IzzyOnDroid Version](https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/dev.mariinkys.OpenPillReminder&label=IzzyOnDroid)
+![GitHub License](https://img.shields.io/github/license/mariinkys/kantan)
+![GitHub Repo Stars](https://img.shields.io/github/stars/mariinkys/kantan)
+![GitHub Release](https://img.shields.io/github/v/release/mariinkys/kantan)
 
 <h3>Kantan is an Open Source Japanese dictionary and learning tool for Android</h3>
 
