@@ -1,0 +1,65 @@
+name: Android Testing Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: Release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'gradle'
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Sign and Align APK
+        id: final_process
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          ALIAS: ${{ secrets.ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # 1. Find build tools
+          BUILD_TOOLS_PATH=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+          
+          # 2. Decode keystore from the env variable
+          echo "$SIGNING_KEY" | base64 -d > release.jks
+          
+          # 3. Align the APK
+          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          
+          # 4. Sign the APK using env variables
+          $BUILD_TOOLS_PATH/apksigner sign --ks release.jks \
+            --ks-key-alias "$ALIAS" \
+            --ks-pass pass:"$KEY_PASSWORD" \
+            --key-pass pass:"$KEY_PASSWORD" \
+            --out kantan-latest.apk \
+            aligned.apk
+          
+          # 5. Generate Hash for logs
+          sha256=$(sha256sum kantan-latest.apk | awk '{ print $1 }')
+          echo "SHA-256 Hash: $sha256"
+          
+          # 6. Cleanup
+          rm release.jks aligned.apk
+          
+          # 7. Set output for the next step
+          echo "apk_name=kantan-latest.apk" >> $GITHUB_OUTPUT
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: kantan-Production-Build
+          path: ${{ steps.final_process.outputs.apk_name }}
+          if-no-files-found: error
+          retention-days: 3
