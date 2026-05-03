@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# ML Kit Digital Ink Recognition rules
+# Keep the main API entry points
+-keep class com.google.mlkit.vision.digitalink.** { *; }
+# Keep the internal factory/registry classes
+-keep class com.google.mlkit.common.internal.** { *; }
+-keep class com.google.mlkit.common.sdkinternal.** { *; }
