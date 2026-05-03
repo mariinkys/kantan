@@ -17,4 +17,4 @@ local.properties
 *.keystore
 *.p12
 /app/release
-/app/src/main/assets/kanji/kanji
+/app/src/main/assets/kanji

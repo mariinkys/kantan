@@ -21,7 +21,7 @@ import org.xmlpull.v1.XmlPullParserFactory
 object KanjiVGParser {
 
     private const val TAG = "KanjiVGParser"
-    private const val ASSET_DIR = "kanji/kanji"
+    private const val ASSET_DIR = "kanji"
 
     /**
      * Returns stroke paths for [character], or empty list if the file doesn't
