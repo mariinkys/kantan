@@ -72,7 +72,8 @@ these values.
 ## Copyright and Licensing
 
 - The dictionary words and kanji come from the JMDict, EDICT and KANJIDIC files owned by the
-  Electronic Dictionary Research and Development Group ([www.edrdg.org](www.edrdg.org)).
+  Electronic Dictionary Research and Development Group ([www.edrdg.org](www.edrdg.org)), and are
+  used in conformance with the Group's license.
 
 - The example sentences come from the projects Tatoeba and Tanaka Corpus.
 
