@@ -21,7 +21,7 @@ import org.xmlpull.v1.XmlPullParserFactory
 object KanjiVGParser {
 
     private const val TAG = "KanjiVGParser"
-    private const val ASSET_DIR = "kanji"
+    private const val ASSET_DIR = "kanji/kanji"
 
     /**
      * Returns stroke paths for [character], or empty list if the file doesn't
@@ -45,16 +45,22 @@ object KanjiVGParser {
 
     private fun parseStrokesFromStream(parser: XmlPullParser): List<Path> {
         val paths = mutableListOf<Path>()
-        var insideStrokePaths = false
+        // -1 means we are not currently inside the StrokePaths group
+        var strokePathsDepth = -1
 
         while (parser.eventType != XmlPullParser.END_DOCUMENT) {
             when (parser.eventType) {
                 XmlPullParser.START_TAG -> {
-                    val id = parser.getAttributeValue(null, "id") ?: ""
-                    if (parser.name == "g" && id.startsWith("kvg:StrokePaths")) {
-                        insideStrokePaths = true
+                    if (parser.name == "g") {
+                        val id = parser.getAttributeValue(null, "id") ?: ""
+                        if (id.startsWith("kvg:StrokePaths")) {
+                            // Record the depth of the main container
+                            strokePathsDepth = parser.depth
+                        }
                     }
-                    if (insideStrokePaths && parser.name == "path") {
+
+                    // If we are anywhere inside the stroke paths group, grab the path
+                    if (strokePathsDepth != -1 && parser.name == "path") {
                         val d = parser.getAttributeValue(null, "d")
                         if (!d.isNullOrBlank()) {
                             svgPathDataToAndroidPath(d)?.let { paths.add(it) }
@@ -63,8 +69,9 @@ object KanjiVGParser {
                 }
 
                 XmlPullParser.END_TAG -> {
-                    if (parser.name == "g" && insideStrokePaths) {
-                        insideStrokePaths = false
+                    // Only reset if we are closing the exact <g> tag that opened our group
+                    if (parser.name == "g" && parser.depth == strokePathsDepth) {
+                        strokePathsDepth = -1
                     }
                 }
             }
