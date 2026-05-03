@@ -45,7 +45,11 @@ fun SearchScreen(
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(vertical = 32.dp)
+    ) {
         SearchBar(
             query = viewModel.query,
             onQueryChange = viewModel::onQueryChange,
