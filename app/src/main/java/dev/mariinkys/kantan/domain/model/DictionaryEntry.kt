@@ -10,7 +10,9 @@ data class DictionaryEntry(
     val reading: String,      // kana reading     e.g. "たべる"
     val definitions: List<String>,
     val rules: String,        // inflection codes e.g. "v1" (ichidan verb)
-    val tags: String          // term tags        e.g. "news ichi"
+    val definitionTags: String, // "1 adj-na n"
+    val tags: String,         // term tags        e.g. "news ichi"
+    val examples: List<ExampleSentence> = emptyList()
 ) {
     /** First definition, trimmed, for compact list display. */
     val shortDefinition: String

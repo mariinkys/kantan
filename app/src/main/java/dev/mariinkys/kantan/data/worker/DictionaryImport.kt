@@ -12,6 +12,7 @@ import dev.mariinkys.kantan.data.local.dao.TermDao
 import dev.mariinkys.kantan.data.local.entity.KanjiEntity
 import dev.mariinkys.kantan.data.local.entity.TermEntity
 import dev.mariinkys.kantan.data.local.entity.TermFtsEntity
+import dev.mariinkys.kantan.domain.model.ExampleSentence
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -84,19 +85,27 @@ class DictionaryImportWorker @AssistedInject constructor(
     private fun JsonArray.toTermEntity(): TermEntity? = runCatching {
         val tags = this[2].jsonPrimitive.content
 
+        // Skip meta-entries; keep everything else including "exp", "v1", "adj-na", etc.
         if (tags.contains("forms") || tags.contains("kana") || tags.contains("kanji")) {
             return null
         }
 
-        val definitions = this[5].jsonArray.flatMap { element ->
+        val definitions = mutableListOf<String>()
+        val examples = mutableListOf<ExampleSentence>()
+
+        this[5].jsonArray.forEach { element ->
             when (element) {
                 is JsonPrimitive -> {
                     val content = element.content.trim()
-                    if (content.isNotBlank()) listOf(content) else emptyList()
+                    if (content.isNotBlank()) definitions.add(content)
                 }
 
-                is JsonObject -> extractGlossaryOnly(element)
-                else -> emptyList()
+                is JsonObject -> {
+                    definitions.addAll(extractGlossary(element))
+                    examples.addAll(extractExamples(element))
+                }
+
+                else -> Unit
             }
         }
 
@@ -111,23 +120,28 @@ class DictionaryImportWorker @AssistedInject constructor(
             definitions = definitions,
             sequence = this[6].jsonPrimitive.int,
             termTags = this[7].jsonPrimitive.content,
-            definitionsText = definitions.joinToString(" ")
+            definitionsText = definitions.joinToString(" "),
+            examplesJson = Json.encodeToString(examples)
         )
     }.getOrNull()
 
-    private fun extractGlossaryOnly(element: JsonElement): List<String> {
+    private fun extractGlossary(element: JsonElement): List<String> {
         val results = mutableListOf<String>()
 
-        if (element is JsonObject && element["type"]?.jsonPrimitive?.content == "structured-content") {
-            val contentArray = element["content"]?.jsonArray ?: return emptyList()
-
-            for (item in contentArray) {
-                val itemObj = item as? JsonObject ?: continue
-                val dataContent =
-                    itemObj["data"]?.jsonObject?.get("content")?.jsonPrimitive?.content
-
-                if (dataContent == "glossary") {
-                    val text = extractTextFromNode(itemObj["content"] ?: continue)
+        if (element is JsonObject &&
+            element["type"]?.jsonPrimitive?.content == "structured-content"
+        ) {
+            val contentEl = element["content"] ?: return emptyList()
+            // Normalize: wrap a lone object into a list so we always iterate the same way.
+            val items: List<JsonElement> = when (contentEl) {
+                is JsonArray -> contentEl.toList()
+                is JsonObject -> listOf(contentEl)
+                else -> return emptyList()
+            }
+            for (item in items) {
+                val obj = item as? JsonObject ?: continue
+                if (obj["data"]?.jsonObject?.get("content")?.jsonPrimitive?.content == "glossary") {
+                    val text = extractTextFromNode(obj["content"] ?: continue)
                     if (text.isNotBlank()) results.add(text)
                 }
             }
@@ -138,15 +152,56 @@ class DictionaryImportWorker @AssistedInject constructor(
         return results
     }
 
+    private fun extractExamples(element: JsonElement): List<ExampleSentence> {
+        val results = mutableListOf<ExampleSentence>()
+
+        if (element !is JsonObject ||
+            element["type"]?.jsonPrimitive?.content != "structured-content"
+        ) return results
+
+        val contentEl = element["content"] ?: return results
+        val items: List<JsonElement> = when (contentEl) {
+            is JsonArray -> contentEl.toList()
+            is JsonObject -> listOf(contentEl)
+            else -> return results
+        }
+
+        for (item in items) {
+            val obj = item as? JsonObject ?: continue
+            if (obj["data"]?.jsonObject?.get("content")?.jsonPrimitive?.content != "examples") continue
+
+            val liItems = (obj["content"] as? JsonArray) ?: continue
+            // the pattern is: Japanese li (no lang or lang="ja") followed by English li (lang="en")
+            var japanese = ""
+            var english = ""
+
+            for (li in liItems) {
+                val liObj = li as? JsonObject ?: continue
+                val lang = liObj["lang"]?.jsonPrimitive?.content
+                val text = extractTextFromNode(liObj["content"] ?: continue).trim()
+
+                when (lang) {
+                    null, "ja" -> japanese = text
+                    "en" -> english = text
+                }
+            }
+            if (japanese.isNotBlank()) {
+                results.add(ExampleSentence(japanese = japanese, english = english))
+            }
+        }
+
+        return results
+    }
+
     private fun extractTextFromNode(node: JsonElement): String = when (node) {
         is JsonPrimitive -> node.content
         is JsonArray -> node.joinToString(" ") { extractTextFromNode(it) }
         is JsonObject -> {
-            val tag = node["tag"]?.jsonPrimitive?.content
+            val nodeTag = node["tag"]?.jsonPrimitive?.content
             val content = node["content"]
             if (node["data"] != null && content == null) return ""
             val inner = if (content != null) extractTextFromNode(content) else ""
-            when (tag) {
+            when (nodeTag) {
                 "tr" -> (content as? JsonArray)
                     ?.joinToString(" | ") { extractTextFromNode(it).trim() } ?: inner
 
@@ -190,3 +245,4 @@ class DictionaryImportWorker @AssistedInject constructor(
         )
     }.getOrNull()
 }
+

@@ -25,6 +25,7 @@ data class TermEntity(
     val definitions: List<String>,
     val sequence: Int,
     val termTags: String,
+    val examplesJson: String = "[]",
     // Flat text used by the FTS table — all definition strings joined with spaces.
     @ColumnInfo(name = "definitions_text") val definitionsText: String = ""
 )

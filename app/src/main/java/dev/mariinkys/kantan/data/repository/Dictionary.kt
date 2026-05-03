@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
 class DictionaryRepositoryImpl @Inject constructor(
@@ -57,7 +58,10 @@ class DictionaryRepositoryImpl @Inject constructor(
                         reading = variations.map { it.reading }.distinct().joinToString(", "),
                         definitions = variations.flatMap { it.definitions }.distinct(),
                         rules = bestMatch.rules,
+                        definitionTags = bestMatch.definitionTags,
                         tags = bestMatch.termTags
+                        // we don't need this for searching I think?
+                        //examples = Json.decodeFromString(bestMatch.examplesJson),
                     )
                 }
 
@@ -91,7 +95,9 @@ class DictionaryRepositoryImpl @Inject constructor(
         reading = reading,
         definitions = definitions,
         rules = rules,
-        tags = termTags
+        definitionTags = definitionTags,
+        tags = termTags,
+        examples = Json.decodeFromString(examplesJson)
     )
 
     private fun KanjiEntity.toDomain() = KanjiEntry(

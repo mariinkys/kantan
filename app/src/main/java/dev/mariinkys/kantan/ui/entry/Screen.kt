@@ -16,6 +16,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -25,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -33,12 +35,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
+import dev.mariinkys.kantan.domain.model.ExampleSentence
 import dev.mariinkys.kantan.domain.model.KanjiEntry
+import dev.mariinkys.kantan.util.resolveTag
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -147,21 +152,18 @@ private fun DefinitionsTab(entry: DictionaryEntry) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
-        // TODO: FIX Tags row (rules + term tags)
-        val tagChips = buildList {
-            if (entry.rules.isNotBlank()) addAll(entry.rules.split(" "))
+        val tagCodes = buildList {
+            if (entry.definitionTags.isNotBlank()) addAll(entry.definitionTags.split(" "))
             if (entry.tags.isNotBlank()) addAll(entry.tags.split(" "))
-        }.filter { it.isNotBlank() }.distinct()
+            if (entry.rules.isNotBlank()) addAll(entry.rules.split(" "))
+        }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .filter { it.toIntOrNull() == null }
 
-        if (tagChips.isNotEmpty()) {
+        if (tagCodes.isNotEmpty()) {
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    tagChips.forEach { tag ->
-                        SuggestionChip(
-                            onClick = {},
-                            label = { Text(tag, style = MaterialTheme.typography.labelSmall) })
-                    }
-                }
+                TagRow(tagCodes)
             }
         }
 
@@ -185,15 +187,86 @@ private fun DefinitionsTab(entry: DictionaryEntry) {
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-                if (index < entry.definitions.lastIndex) HorizontalDivider(
-                    modifier = Modifier.padding(
-                        top = 8.dp
-                    )
-                )
+                if (index < entry.definitions.lastIndex) {
+                    HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+                }
             }
         }
 
-        // TODO: Example sentences
+        if (entry.examples.isNotEmpty()) {
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Text(
+                    text = "Examples",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+            itemsIndexed(entry.examples) { _, example ->
+                ExampleCard(example)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TagRow(tagCodes: List<String>) {
+    val posCategories = setOf(
+        "adj-i", "adj-ix", "adj-na", "adj-no", "adj-pn", "adj-f", "adj-t",
+        "adv", "adv-to", "aux", "aux-adj", "aux-v", "conj", "cop", "ctr",
+        "exp", "int", "n", "n-adv", "n-pr", "n-pref", "n-suf", "n-t",
+        "num", "pn", "pref", "prt", "suf", "unc",
+        "v1", "v1-s", "v5aru", "v5b", "v5g", "v5k", "v5k-s", "v5m",
+        "v5n", "v5r", "v5r-i", "v5s", "v5t", "v5u", "v5u-s", "v5uru",
+        "vi", "vk", "vn", "vr", "vs", "vs-c", "vs-i", "vs-s", "vt", "vz"
+    )
+
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        tagCodes.forEach { code ->
+            val label = resolveTag(code)
+            val isPos = code in posCategories
+            SuggestionChip(
+                onClick = {},
+                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                colors = if (isPos) SuggestionChipDefaults.suggestionChipColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                ) else SuggestionChipDefaults.suggestionChipColors()
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExampleCard(example: ExampleSentence) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = example.japanese,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            if (example.english.isNotBlank()) {
+                Text(
+                    text = example.english,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontStyle = FontStyle.Italic
+                )
+            }
+        }
     }
 }
 
