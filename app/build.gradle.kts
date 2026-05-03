@@ -87,4 +87,8 @@ dependencies {
     implementation(libs.androidx.graphics.path)
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // Japanese chars recognition
+    implementation(libs.digital.ink.recognition)
+    implementation(libs.kotlinx.coroutines.play.services)
 }

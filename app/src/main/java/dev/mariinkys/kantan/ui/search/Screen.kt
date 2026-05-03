@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -29,15 +30,21 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
+import dev.mariinkys.kantan.ui.search.handwriting.HandwritingBottomSheet
 
 @Composable
 fun SearchScreen(
@@ -45,6 +52,8 @@ fun SearchScreen(
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
+    var showHandwriting by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -54,6 +63,7 @@ fun SearchScreen(
             query = viewModel.query,
             onQueryChange = viewModel::onQueryChange,
             onClear = viewModel::clearQuery,
+            onHandwritingClick = { showHandwriting = true },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -75,6 +85,17 @@ fun SearchScreen(
                 )
             }
         }
+
+        // Handwriting sheet
+        if (showHandwriting) {
+            HandwritingBottomSheet(
+                onDismiss = { showHandwriting = false },
+                onCharacterSelected = { character ->
+                    val newQuery = viewModel.query + character
+                    viewModel.onQueryChange(newQuery)
+                }
+            )
+        }
     }
 }
 
@@ -83,13 +104,29 @@ private fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
+    onHandwritingClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
+    var textFieldValue by remember {
+        mutableStateOf(TextFieldValue(text = query, selection = TextRange(query.length)))
+    }
+
+    LaunchedEffect(query) {
+        if (query != textFieldValue.text) {
+            textFieldValue = textFieldValue.copy(
+                text = query,
+                selection = TextRange(query.length)
+            )
+        }
+    }
 
     OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
+        value = textFieldValue,
+        onValueChange = { newFieldValue ->
+            textFieldValue = newFieldValue
+            onQueryChange(newFieldValue.text)
+        },
         modifier = modifier.focusRequester(focusRequester),
         placeholder = {
             Text(
@@ -100,9 +137,18 @@ private fun SearchBar(
         },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = {
-            AnimatedVisibility(visible = query.isNotEmpty(), enter = fadeIn(), exit = fadeOut()) {
-                IconButton(onClick = onClear) {
-                    Icon(Icons.Default.Close, contentDescription = "Clear")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AnimatedVisibility(query.isNotEmpty(), enter = fadeIn(), exit = fadeOut()) {
+                    IconButton(onClick = onClear) {
+                        Icon(Icons.Default.Close, "Clear")
+                    }
+                }
+                IconButton(onClick = onHandwritingClick) {
+                    Icon(
+                        imageVector = Icons.Default.Create,
+                        contentDescription = "Draw to search",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         },
