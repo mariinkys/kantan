@@ -21,6 +21,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Extract Kanji Assets
+        run: |
+          mkdir -p app/src/main/assets/
+          unzip app/src/main/assets/kanji.zip -d app/src/main/assets
+
       - name: Set up JDK 25
         uses: actions/setup-java@v5
         with:
