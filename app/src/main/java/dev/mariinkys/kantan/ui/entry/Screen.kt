@@ -168,28 +168,29 @@ private fun DefinitionsTab(entry: DictionaryEntry) {
         }
 
         // Numbered definitions
-        itemsIndexed(entry.definitions) { index, def ->
-            val cleaned = def.trimStart('\n').trim()
-            if (cleaned.isNotBlank()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "${index + 1}.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.width(24.dp)
-                    )
-                    Text(
-                        text = cleaned,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                if (index < entry.definitions.lastIndex) {
-                    HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
-                }
+        val cleanDefinitions = entry.definitions
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+        itemsIndexed(cleanDefinitions) { index, def ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "${index + 1}.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.width(24.dp)
+                )
+                Text(
+                    text = def,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            if (index < cleanDefinitions.lastIndex) {
+                HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
             }
         }
 

@@ -13,16 +13,19 @@ import dev.mariinkys.kantan.ui.search.SearchScreen
 import java.net.URLDecoder
 import java.net.URLEncoder
 
+private fun String.enc() = URLEncoder.encode(this, "UTF-8")
+private fun String.dec() = URLDecoder.decode(this, "UTF-8")
+
 sealed class Screen(val route: String) {
     data object Search : Screen("search")
-    data object EntryDetail : Screen("entry/{entryId}") {
-        fun createRoute(entryId: Long) = "entry/$entryId"
+
+    data object EntryDetail : Screen("entry/{expression}/{reading}") {
+        fun createRoute(expression: String, reading: String) =
+            "entry/${expression.enc()}/${reading.enc()}"
     }
 
     data object KanjiDetail : Screen("kanji/{character}") {
-        // Kanji characters can be multibyte, URL-encode to survive nav route parsing
-        fun createRoute(character: String) =
-            "kanji/${URLEncoder.encode(character, "UTF-8")}"
+        fun createRoute(character: String) = "kanji/${character.enc()}"
     }
 }
 
@@ -37,16 +40,24 @@ fun AppNavigation(modifier: Modifier = Modifier) {
     ) {
         composable(Screen.Search.route) {
             SearchScreen(
-                onEntryClick = { entryId ->
-                    navController.navigate(Screen.EntryDetail.createRoute(entryId))
+                onEntryClick = { expression, reading ->
+                    navController.navigate(Screen.EntryDetail.createRoute(expression, reading))
                 }
             )
         }
 
         composable(
             route = Screen.EntryDetail.route,
-            arguments = listOf(navArgument("entryId") { type = NavType.LongType })
-        ) {
+            arguments = listOf(
+                navArgument("expression") { type = NavType.StringType },
+                navArgument("reading") { type = NavType.StringType }
+            )
+        ) { backStack ->
+            val expression = backStack.arguments?.getString("expression")?.dec() ?: ""
+            val reading = backStack.arguments?.getString("reading")?.dec() ?: ""
+            backStack.arguments?.putString("expression", expression)
+            backStack.arguments?.putString("reading", reading)
+
             EntryDetailScreen(
                 onBack = { navController.popBackStack() },
                 onKanjiClick = { character ->
@@ -58,17 +69,11 @@ fun AppNavigation(modifier: Modifier = Modifier) {
         composable(
             route = Screen.KanjiDetail.route,
             arguments = listOf(navArgument("character") { type = NavType.StringType })
-        ) { backStackEntry ->
-            // Decode the URL-encoded character before passing to the VM via SavedStateHandle
-            val raw = backStackEntry.arguments?.getString("character") ?: ""
-            val character = URLDecoder.decode(raw, "UTF-8")
+        ) { backStack ->
+            val character = backStack.arguments?.getString("character")?.dec() ?: ""
+            backStack.arguments?.putString("character", character)
 
-            // Re-inject decoded value so the VM's SavedStateHandle sees the plain character
-            backStackEntry.arguments?.putString("character", character)
-
-            KanjiDetailScreen(
-                onBack = { navController.popBackStack() }
-            )
+            KanjiDetailScreen(onBack = { navController.popBackStack() })
         }
     }
 }

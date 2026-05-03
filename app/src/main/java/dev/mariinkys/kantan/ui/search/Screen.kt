@@ -41,7 +41,7 @@ import dev.mariinkys.kantan.domain.model.DictionaryEntry
 
 @Composable
 fun SearchScreen(
-    onEntryClick: (entryId: Long) -> Unit,
+    onEntryClick: (expression: String, reading: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -108,10 +108,19 @@ private fun SearchBar(
 }
 
 @Composable
-private fun ResultList(entries: List<DictionaryEntry>, onEntryClick: (Long) -> Unit) {
+private fun ResultList(
+    entries: List<DictionaryEntry>,
+    onEntryClick: (String, String) -> Unit
+) {
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
-        items(items = entries, key = { it.id }) { entry ->
-            EntryRow(entry = entry, onClick = { onEntryClick(entry.id) })
+        items(
+            items = entries,
+            key = { "${it.expression}|${it.reading}" }
+        ) { entry ->
+            EntryRow(
+                entry = entry,
+                onClick = { onEntryClick(entry.expression, entry.reading) }
+            )
             HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
         }
     }
@@ -139,7 +148,7 @@ private fun EntryRow(entry: DictionaryEntry, onClick: () -> Unit) {
         }
         Spacer(Modifier.width(12.dp))
         Text(
-            text = entry.shortDefinition,
+            text = entry.longDefinition,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,

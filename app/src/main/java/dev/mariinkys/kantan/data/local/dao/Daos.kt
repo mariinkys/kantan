@@ -17,16 +17,15 @@ interface TermDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertFts(entries: List<TermFtsEntity>)
 
-    @Query("SELECT * FROM terms WHERE id = :id LIMIT 1")
-    suspend fun getById(id: Long): TermEntity?
-
     /**
-     * Prefix search for Japanese / romaji-converted kana input.
+     * Returns ALL rows matching the prefix — including every sense of each word.
+     * Grouping into one DictionaryEntry per (expression, reading) is done in the
+     * repository, not here, so the detail screen and search see identical data.
      *
-     * Ordering: exact reading match first, then by reading length ascending
-     * (shorter = more specific match), then score descending.
-     * This ensures e.g. "簡単" (かんたん) ranks above "簡単に" (かんたんに)
-     * when searching for "かんたん".
+     * Ordered so the most relevant word surfaces first within each group:
+     *   1. Exact match on reading or expression
+     *   2. Shorter reading (more specific)
+     *   3. Higher score
      */
     @Query(
         """
@@ -40,30 +39,32 @@ interface TermDao {
         LIMIT :limit
     """
     )
-    suspend fun searchByPrefix(prefix: String, limit: Int = 60): List<TermEntity>
+    suspend fun searchByPrefix(prefix: String, limit: Int = 200): List<TermEntity>
 
+    /**
+     * FTS search — also returns all rows so the repository can group them.
+     * Higher limit because we're merging rows; visible results will be fewer.
+     */
     @Query(
         """
         SELECT t.* FROM terms t
-        WHERE t.expression IN (
-            SELECT expression FROM terms_fts WHERE terms_fts MATCH :query
-        )
-        ORDER BY 
-            /* TIER 1: Exact matches for the search term in definitions */
-            (t.definitions_text = :rawQuery) DESC,
-            
-            /* TIER 2: Definition starts with the search term (primary meaning) */
-            (t.definitions_text LIKE :rawQuery || '%') DESC,
-            
-            /* TIER 3: Commonality score from the dictionary */
-            t.score DESC,
-            
-            /* TIER 4: Favor shorter Japanese words to avoid compound word noise */
-            LENGTH(t.expression) ASC
+        INNER JOIN terms_fts f ON t.id = f.rowid
+        WHERE terms_fts MATCH :query
+        ORDER BY t.score DESC
         LIMIT :limit
     """
     )
-    suspend fun searchByFts(query: String, rawQuery: String, limit: Int): List<TermEntity>
+    suspend fun searchByFts(query: String, limit: Int = 200): List<TermEntity>
+
+    /** All rows for a specific (expression, reading) pair — used by the detail screen. */
+    @Query(
+        """
+        SELECT * FROM terms
+        WHERE expression = :expression AND reading = :reading
+        ORDER BY score DESC
+    """
+    )
+    suspend fun getByExpressionAndReading(expression: String, reading: String): List<TermEntity>
 
     @Query("SELECT COUNT(*) FROM terms")
     suspend fun count(): Int
