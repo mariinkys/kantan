@@ -99,7 +99,8 @@ private fun HandwritingSheetContent(
 
         // Status Header
         when (val s = viewModel.modelState) {
-            is ModelState.Downloading -> LoadingIndicator()
+            is ModelState.Checking -> LoadingIndicator("Checking model availability…")
+            is ModelState.Downloading -> LoadingIndicator("Downloading model…")
             is ModelState.Failed -> Text(
                 s.message,
                 color = MaterialTheme.colorScheme.error,
@@ -200,14 +201,14 @@ private fun HandwritingSheetContent(
 }
 
 @Composable
-private fun LoadingIndicator() {
+private fun LoadingIndicator(text: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
         Text(
-            text = "Downloading model…",
+            text = text,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

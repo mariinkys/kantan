@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 sealed interface ModelState {
+    data object Checking : ModelState
     data object Downloading : ModelState
     data object Ready : ModelState
     data class Failed(val message: String) : ModelState
@@ -27,7 +28,7 @@ data class PointWithTime(val offset: Offset, val timestamp: Long)
 
 class HandwritingViewModel : ViewModel() {
 
-    var modelState by mutableStateOf<ModelState>(ModelState.Downloading)
+    var modelState by mutableStateOf<ModelState>(ModelState.Checking)
         private set
 
     var strokes by mutableStateOf<List<DrawnStroke>>(emptyList())
@@ -54,10 +55,14 @@ class HandwritingViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val manager = RemoteModelManager.getInstance()
+
                 // if model is not cached we download (see: https://developers.google.com/ml-kit/vision/digital-ink-recognition/android) I think
-                if (!manager.isModelDownloaded(m).await()) {
+                val isDownloaded = manager.isModelDownloaded(m).await()
+                if (!isDownloaded) {
+                    modelState = ModelState.Downloading
                     manager.download(m, DownloadConditions.Builder().build()).await()
                 }
+                
                 modelState = ModelState.Ready
             } catch (e: Exception) {
                 modelState = ModelState.Failed("Download failed: ${e.message}")
