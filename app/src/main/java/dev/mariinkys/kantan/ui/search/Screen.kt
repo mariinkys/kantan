@@ -48,7 +48,7 @@ fun SearchScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(vertical = 32.dp)
+            .padding(vertical = 48.dp)
     ) {
         SearchBar(
             query = viewModel.query,
@@ -91,7 +91,13 @@ private fun SearchBar(
         value = query,
         onValueChange = onQueryChange,
         modifier = modifier.focusRequester(focusRequester),
-        placeholder = { Text("Search in Japanese, romaji or English…") },
+        placeholder = {
+            Text(
+                "Search in Japanese, rōmaji or English…",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = {
             AnimatedVisibility(visible = query.isNotEmpty(), enter = fadeIn(), exit = fadeOut()) {
