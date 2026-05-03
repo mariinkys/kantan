@@ -26,58 +26,29 @@ class DictionaryRepositoryImpl @Inject constructor(
         if (q.isBlank()) return flowOf(emptyList())
 
         return flow {
-            val isJapanese = RomajiConverter.isJapanese(q)
-
-            val rawResults = if (isJapanese) {
+            val rows = if (RomajiConverter.isJapanese(q)) {
                 termDao.searchByPrefix(q)
             } else {
                 val kana = RomajiConverter.convert(q)
-                val convertedSuccessfully = kana != q && kana.isNotBlank()
-
-                val prefixResults =
-                    if (convertedSuccessfully) termDao.searchByPrefix(kana) else emptyList()
+                val prefixRows = if (kana != q && kana.isNotBlank())
+                    termDao.searchByPrefix(kana) else emptyList()
                 val ftsQuery = buildFtsQuery(q)
-                val ftsResults = if (ftsQuery.isNotBlank()) {
-                    runCatching {
-                        termDao.searchByFts(ftsQuery, q, limit = 200)
-                    }.getOrElse { emptyList() }
-                } else emptyList()
-
+                val ftsRows = if (ftsQuery.isNotBlank())
+                    runCatching { termDao.searchByFts(ftsQuery) }.getOrElse { emptyList() }
+                else emptyList()
+                // Deduplicate by id before grouping
                 val seen = mutableSetOf<Long>()
-                (prefixResults + ftsResults).filter { seen.add(it.id) }
+                (prefixRows + ftsRows).filter { seen.add(it.id) }
             }
-
-            val grouped = rawResults
-                .groupBy { it.expression }
-                .values
-                .map { variations ->
-                    val bestMatch = variations.maxBy { it.score }
-                    DictionaryEntry(
-                        id = bestMatch.id,
-                        expression = bestMatch.expression,
-                        reading = variations.map { it.reading }.distinct().joinToString(", "),
-                        definitions = variations.flatMap { it.definitions }.distinct(),
-                        rules = bestMatch.rules,
-                        definitionTags = bestMatch.definitionTags,
-                        tags = bestMatch.termTags
-                        // we don't need this for searching I think?
-                        //examples = Json.decodeFromString(bestMatch.examplesJson),
-                    )
-                }
-
-            emit(grouped)
+            emit(rows.groupAndMap())
         }.flowOn(Dispatchers.IO)
     }
 
-    private fun buildFtsQuery(raw: String): String {
-        val words = raw.split(Regex("\\s+")).filter { it.length >= 2 }
-        if (words.isEmpty()) return ""
-
-        return words.joinToString(" ") { "\"$it\" OR $it*" }
-    }
-
-    override suspend fun getEntryById(id: Long): DictionaryEntry? =
-        termDao.getById(id)?.toDomain()
+    override suspend fun getEntry(expression: String, reading: String): DictionaryEntry? =
+        termDao.getByExpressionAndReading(expression, reading)
+            .takeIf { it.isNotEmpty() }
+            ?.groupAndMap()
+            ?.firstOrNull()
 
     override suspend fun getKanji(character: String): KanjiEntry? =
         kanjiDao.getByCharacter(character)?.toDomain()
@@ -88,17 +59,45 @@ class DictionaryRepositoryImpl @Inject constructor(
         return kanjiDao.getByCharacters(chars).map { it.toDomain() }
     }
 
+    /**
+     * Groups a flat list of TermEntity rows (one per JMdict sense) into one
+     * DictionaryEntry per (expression, reading) pair, merging all definitions.
+     *
+     * The input list is already ordered by relevance from the DAO query, so
+     * `groupBy` preserves that order — the first entry seen for each key
+     * determines the group's position in the output list.
+     */
+    private fun List<TermEntity>.groupAndMap(): List<DictionaryEntry> =
+        groupBy { it.expression to it.reading }
+            .map { (key, rows) ->
+                val (expression, reading) = key
+                DictionaryEntry(
+                    expression = expression,
+                    reading = reading,
+                    definitions = rows
+                        .flatMap { it.definitions }
+                        .map { it.trimStart('\n').trim() }
+                        .filter { it.isNotBlank() }
+                        .distinct(),
+                    rules = rows.firstNotNullOfOrNull { it.rules.takeIf { r -> r.isNotBlank() } }
+                        ?: "",
+                    definitionTags = rows.firstNotNullOfOrNull { it.definitionTags.takeIf { t -> t.isNotBlank() } }
+                        ?: "",
+                    tags = rows.firstNotNullOfOrNull { it.termTags.takeIf { t -> t.isNotBlank() } }
+                        ?: "",
+                    examples = Json.decodeFromString(rows.firstNotNullOfOrNull { it.examplesJson.takeIf { r -> r.isNotBlank() } } as String)
+                )
+            }
 
-    private fun TermEntity.toDomain() = DictionaryEntry(
-        id = id,
-        expression = expression,
-        reading = reading,
-        definitions = definitions,
-        rules = rules,
-        definitionTags = definitionTags,
-        tags = termTags,
-        examples = Json.decodeFromString(examplesJson)
-    )
+    private fun buildFtsQuery(raw: String): String {
+        val words = raw
+            .replace(Regex("""["()\-*:]+"""), " ")
+            .trim()
+            .split(Regex("\\s+"))
+            .filter { it.length >= 2 }
+        if (words.isEmpty()) return ""
+        return words.joinToString(" ") { "$it*" }
+    }
 
     private fun KanjiEntity.toDomain() = KanjiEntry(
         character = character,
