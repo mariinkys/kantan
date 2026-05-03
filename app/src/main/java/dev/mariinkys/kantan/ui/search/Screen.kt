@@ -162,8 +162,6 @@ private fun EntryRow(entry: DictionaryEntry, onClick: () -> Unit) {
 private fun EmptyPrompt() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("🔍", style = MaterialTheme.typography.displaySmall)
-            Spacer(Modifier.height(12.dp))
             Text(
                 "Type to search the dictionary",
                 style = MaterialTheme.typography.bodyLarge,
