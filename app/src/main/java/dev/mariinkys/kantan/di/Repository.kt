@@ -8,6 +8,8 @@ import dev.mariinkys.kantan.data.repository.DictionaryRepositoryImpl
 import dev.mariinkys.kantan.domain.repository.DictionaryRepository
 import javax.inject.Singleton
 
+// Despite what the IDE might say this is being used, the app will not compile without it (:
+
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
