@@ -88,7 +88,6 @@ fun AboutScreen(
             .padding(vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top Bar with Hamburger
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -101,7 +100,6 @@ fun AboutScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // App Info
         Icon(
             painter = painterResource(id = R.mipmap.ic_launcher_foreground),
             contentDescription = "App Logo",
@@ -166,6 +164,16 @@ fun AboutScreen(
         }) {
             Text(
                 text = "mariinkys",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        TextButton(onClick = {
+            uriHandler.openUri("https://github.com/mariinkys/kantan/issues")
+        }) {
+            Text(
+                text = "Issues / Suggestions",
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
             )
