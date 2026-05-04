@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -49,6 +49,7 @@ import dev.mariinkys.kantan.ui.search.handwriting.HandwritingBottomSheet
 
 @Composable
 fun SearchScreen(
+    onMenuClick: () -> Unit,
     onEntryClick: (expression: String, reading: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel()
@@ -65,6 +66,7 @@ fun SearchScreen(
             onQueryChange = viewModel::onQueryChange,
             onClear = viewModel::clearQuery,
             onHandwritingClick = { showHandwriting = true },
+            onMenuClick = onMenuClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -106,6 +108,7 @@ private fun SearchBar(
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
     onHandwritingClick: () -> Unit,
+    onMenuClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -136,7 +139,11 @@ private fun SearchBar(
                 overflow = TextOverflow.Ellipsis
             )
         },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        leadingIcon = {
+            IconButton(onClick = onMenuClick) {
+                Icon(Icons.Default.Menu, contentDescription = "Open navigation menu")
+            }
+        },
         trailingIcon = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AnimatedVisibility(query.isNotEmpty(), enter = fadeIn(), exit = fadeOut()) {
