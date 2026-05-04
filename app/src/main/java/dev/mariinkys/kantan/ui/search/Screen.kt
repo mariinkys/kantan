@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import dev.mariinkys.kantan.BuildConfig
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.ui.search.handwriting.HandwritingBottomSheet
 
@@ -143,12 +144,14 @@ private fun SearchBar(
                         Icon(Icons.Default.Close, "Clear")
                     }
                 }
-                IconButton(onClick = onHandwritingClick) {
-                    Icon(
-                        imageVector = Icons.Default.Create,
-                        contentDescription = "Draw to search",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                if (BuildConfig.OCR_ENABLED) {
+                    IconButton(onClick = onHandwritingClick) {
+                        Icon(
+                            imageVector = Icons.Default.Create,
+                            contentDescription = "Draw to search",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         },

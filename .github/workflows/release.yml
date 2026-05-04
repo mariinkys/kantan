@@ -33,8 +33,8 @@ jobs:
           java-version: '25'
           cache: 'gradle'
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease
+      - name: Build Both Variants Release APK
+        run: ./gradlew assembleFullRelease assembleFossRelease
 
       - name: Sign and Align APK
         env:
@@ -48,39 +48,58 @@ jobs:
           # 2. Decode keystore from the env variable
           echo "$SIGNING_KEY" | base64 -d > release.jks
           
-          # 3. Align the APK
-          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          # 3.1 Align the Full Variant APK
+          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/full/release/app-full-release-unsigned.apk full-aligned.apk
           
-          # 4. Sign the APK using env variables
+          # 4.1 Sign the Full APK 
           $BUILD_TOOLS_PATH/apksigner sign --ks release.jks \
             --ks-key-alias "$ALIAS" \
             --ks-pass pass:"$KEY_PASSWORD" \
             --key-pass pass:"$KEY_PASSWORD" \
-            --out kantan-${{ github.event.inputs.tag_name }}.apk \
-            aligned.apk
+            --out kantan-full.apk \
+            full-aligned.apk
+          
+          # 3.2 Align the Foss Variant APK
+          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/foss/release/app-foss-release-unsigned.apk foss-aligned.apk
+          
+          # 4.2 Sign the Foss APK 
+          $BUILD_TOOLS_PATH/apksigner sign --ks release.jks \
+            --ks-key-alias "$ALIAS" \
+            --ks-pass pass:"$KEY_PASSWORD" \
+            --key-pass pass:"$KEY_PASSWORD" \
+            --out kantan-foss.apk \
+            foss-aligned.apk
           
           # 5. Cleanup
-          rm release.jks aligned.apk
+          rm release.jks full-aligned.apk foss-aligned.apk
 
-      - name: Generate APK Hash
+      - name: Generate APK Hashes
         id: generate_hash
         run: |
-          sha256=$(sha256sum kantan-${{ github.event.inputs.tag_name }}.apk | awk '{ print $1 }')
-          echo "apk_sha=$sha256" >> $GITHUB_OUTPUT
-          echo "SHA-256 Hash of APK: $sha256"
+          full_sha=$(sha256sum kantan-full.apk | awk '{print $1}')
+          foss_sha=$(sha256sum kantan-foss.apk | awk '{print $1}')
 
-      - name: Create Draft Release with APK
+          echo "full_sha=$full_sha" >> $GITHUB_OUTPUT
+          echo "foss_sha=$foss_sha" >> $GITHUB_OUTPUT
+
+          echo "FULL SHA-256: $full_sha"
+          echo "FOSS SHA-256: $foss_sha"
+
+      - name: Create Draft Release with APKs
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event.inputs.tag_name }}
           name: ${{ github.event.inputs.release_name }}
           draft: true
-          files: kantan-${{ github.event.inputs.tag_name }}.apk
+          files: |
+            kantan-full-${{ github.event.inputs.tag_name }}.apk
+            kantan-foss-${{ github.event.inputs.tag_name }}.apk
           body: |
             <!-- Write changelog here -->
 
             ---
             ### Security Verification
-            **APK SHA-256 Hash:** `${{ steps.generate_hash.outputs.apk_sha }}`
+            **APK (Full) SHA-256 Hash:** `${{ steps.generate_hash.outputs.full_sha }}`
+            **APK (Foss) SHA-256 Hash:** `${{ steps.generate_hash.outputs.foss_sha }}`
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -24,8 +24,8 @@ jobs:
           java-version: '25'
           cache: 'gradle'
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease
+      - name: Build Both Variants Release APK
+        run: ./gradlew assembleFullRelease assembleFossRelease
 
       - name: Sign and Align APK
         id: final_process
@@ -40,31 +40,53 @@ jobs:
           # 2. Decode keystore from the env variable
           echo "$SIGNING_KEY" | base64 -d > release.jks
           
-          # 3. Align the APK
-          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          # 3.1 Align the Full Variant APK
+          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/full/release/app-full-release-unsigned.apk full-aligned.apk
           
-          # 4. Sign the APK using env variables
+          # 4.1 Sign the Full APK 
           $BUILD_TOOLS_PATH/apksigner sign --ks release.jks \
             --ks-key-alias "$ALIAS" \
             --ks-pass pass:"$KEY_PASSWORD" \
             --key-pass pass:"$KEY_PASSWORD" \
-            --out kantan-latest.apk \
-            aligned.apk
+            --out kantan-full.apk \
+            full-aligned.apk
           
-          # 5. Generate Hash for logs
-          sha256=$(sha256sum kantan-latest.apk | awk '{ print $1 }')
-          echo "SHA-256 Hash: $sha256"
+          # 3.2 Align the Foss Variant APK
+          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/foss/release/app-foss-release-unsigned.apk foss-aligned.apk
+          
+          # 4.2 Sign the Foss APK 
+          $BUILD_TOOLS_PATH/apksigner sign --ks release.jks \
+            --ks-key-alias "$ALIAS" \
+            --ks-pass pass:"$KEY_PASSWORD" \
+            --key-pass pass:"$KEY_PASSWORD" \
+            --out kantan-foss.apk \
+            foss-aligned.apk
+          
+          # 5.1 Generate Hash for logs
+          sha256full=$(sha256sum kantan-full.apk | awk '{ print $1 }')
+          echo "SHA-256 Hash: $sha256full"
+          
+          # 5.2 Generate Hash for logs
+          sha256foss=$(sha256sum kantan-foss.apk | awk '{ print $1 }')
+          echo "SHA-256 Hash: $sha256foss"
           
           # 6. Cleanup
-          rm release.jks aligned.apk
+          rm release.jks full-aligned.apk foss-aligned.apk
           
           # 7. Set output for the next step
-          echo "apk_name=kantan-latest.apk" >> $GITHUB_OUTPUT
+          echo "full_apk=kantan-full.apk" >> $GITHUB_OUTPUT
+          echo "foss_apk=kantan-foss.apk" >> $GITHUB_OUTPUT
 
-      - name: Upload Artifact
+      - name: Upload Full APK
         uses: actions/upload-artifact@v7
         with:
-          name: kantan-Production-Build
-          path: ${{ steps.final_process.outputs.apk_name }}
-          if-no-files-found: error
+          name: kantan-full-latest
+          path: ${{ steps.final_process.outputs.full_apk }}
+          retention-days: 3
+
+      - name: Upload FOSS APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: kantan-foss-latest
+          path: ${{ steps.final_process.outputs.foss_apk }}
           retention-days: 3
