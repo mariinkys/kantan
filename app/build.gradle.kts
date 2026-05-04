@@ -24,6 +24,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "distribution"
+
+    productFlavors {
+        create("full") {
+            dimension = "distribution"
+            buildConfigField("Boolean", "OCR_ENABLED", "true")
+            proguardFile("proguard-rules-full.pro")
+        }
+        create("foss") {
+            dimension = "distribution"
+            buildConfigField("Boolean", "OCR_ENABLED", "false")
+            proguardFile("proguard-rules-foss.pro")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -31,8 +46,9 @@ android {
             isDebuggable = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules-common.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -41,6 +57,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -87,4 +104,8 @@ dependencies {
     implementation(libs.androidx.graphics.path)
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // Japanese chars recognition
+    add("fullImplementation", libs.digital.ink.recognition)
+    add("fullImplementation", libs.kotlinx.coroutines.play.services)
 }
