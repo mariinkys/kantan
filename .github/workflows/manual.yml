@@ -27,6 +27,9 @@ jobs:
       - name: Build Both Variants Release APK
         run: ./gradlew assembleFullRelease assembleFossRelease
 
+      - name: Debug APK output
+        run: find app/build/outputs/apk -type f
+
       - name: Sign and Align APK
         id: final_process
         env:
@@ -41,7 +44,7 @@ jobs:
           echo "$SIGNING_KEY" | base64 -d > release.jks
           
           # 3.1 Align the Full Variant APK
-          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/full/release/app-full-release-unsigned.apk full-aligned.apk
+          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/full/release/app-full-release.apk full-aligned.apk
           
           # 4.1 Sign the Full APK 
           $BUILD_TOOLS_PATH/apksigner sign --ks release.jks \
@@ -52,7 +55,7 @@ jobs:
             full-aligned.apk
           
           # 3.2 Align the Foss Variant APK
-          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/foss/release/app-foss-release-unsigned.apk foss-aligned.apk
+          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/foss/release/app-foss-release.apk foss-aligned.apk
           
           # 4.2 Sign the Foss APK 
           $BUILD_TOOLS_PATH/apksigner sign --ks release.jks \
