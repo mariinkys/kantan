@@ -28,6 +28,12 @@
   </a>
 </div>
 
+## Build Variants
+
+- Full: Full application, requires internet connection (only once, to download the model) and play
+  services for handwriting detection.
+- Foss: Does not require internet or play services but does not offer handwriting detection.
+
 ## App Description
 
 Kantan is a free and open source Japanese dictionary and learning tool designed to make studying
@@ -71,15 +77,16 @@ these values.
 
 ## Copyright and Licensing
 
-- The dictionary words and kanji come from the JMDict, EDICT and KANJIDIC files owned by the
+- The dictionary words and kanji come from the JMDict and KANJIDIC files owned by the
   Electronic Dictionary Research and Development Group ([www.edrdg.org](www.edrdg.org)), and are
   used in conformance with the Group's license.
 
 - The example sentences come from the projects Tatoeba and Tanaka Corpus.
 
-- The Kanji strokes information are from KanjiVG provided by Ulrich Apel at kanjivg.tagaini.net.
+- The Kanji strokes information are from KanjiVG provided by Ulrich Apel
+  at [kanjivg.tagaini.net](kanjivg.tagaini.net).
 
-- Kantan specifically uses the JMDict, EDICT and KANJIDIC files provided
+- Kantan specifically uses the JMDict and KANJIDIC files provided
   by [Yomitan](https://github.com/yomidevs/jmdict-yomitan)
 
 Copyright 2026 © Alex Marín
