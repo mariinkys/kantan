@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -136,7 +137,14 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                     modifier = Modifier.fillMaxSize(),
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onEntryClick = { expression, reading ->
-                        navController.navigate(Screen.EntryDetail.createRoute(expression, reading))
+                        if (it.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                            navController.navigate(
+                                Screen.EntryDetail.createRoute(
+                                    expression,
+                                    reading
+                                )
+                            )
+                        }
                     }
                 )
             }
@@ -154,7 +162,11 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                 backStack.arguments?.putString("reading", reading)
 
                 EntryDetailScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = {
+                        if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                            navController.popBackStack()
+                        }
+                    },
                     onKanjiClick = { character ->
                         navController.navigate(Screen.KanjiDetail.createRoute(character))
                     }
@@ -168,7 +180,11 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                 val character = backStack.arguments?.getString("character")?.dec() ?: ""
                 backStack.arguments?.putString("character", character)
 
-                KanjiDetailScreen(onBack = { navController.popBackStack() })
+                KanjiDetailScreen(onBack = {
+                    if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                        navController.popBackStack()
+                    }
+                })
             }
 
             composable(Screen.About.route) {
@@ -177,3 +193,4 @@ fun AppNavigation(modifier: Modifier = Modifier) {
         }
     }
 }
+
