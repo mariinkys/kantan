@@ -36,7 +36,8 @@ import dev.mariinkys.kantan.R
 
 @Composable
 fun AboutScreen(
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    modifier: Modifier
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -84,9 +85,8 @@ fun AboutScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(vertical = 48.dp),
+        modifier = modifier
+            .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(

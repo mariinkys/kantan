@@ -17,10 +17,14 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +75,9 @@ fun AppNavigation(modifier: Modifier = Modifier) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val scope = rememberCoroutineScope()
+
+    // One snackbar for the entire app, I guess it should be better (similar to web)
+    val snackbarHostState = remember { SnackbarHostState() }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -149,17 +156,45 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                 )
             }
         }) {
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Search.route,
-            modifier = modifier
-        ) {
-            composable(Screen.Search.route) {
-                SearchScreen(
-                    modifier = Modifier.fillMaxSize(),
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                    onEntryClick = { expression, reading ->
-                        if (it.lifecycle.currentState == Lifecycle.State.RESUMED) {
+
+        Scaffold(
+            modifier = modifier,
+            snackbarHost = { SnackbarHost(snackbarHostState) }) { innerPadding ->
+
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Search.route,
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding()
+            ) {
+                composable(Screen.Search.route) {
+                    SearchScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        onEntryClick = { expression, reading ->
+                            if (it.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                navController.navigate(
+                                    Screen.EntryDetail.createRoute(
+                                        expression,
+                                        reading
+                                    )
+                                )
+                            }
+                        }
+                    )
+                }
+
+                composable(Screen.Favorites.route) {
+                    FavoritesScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        snackbarHostState = snackbarHostState,
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        onEntryClick = { expression, reading ->
                             navController.navigate(
                                 Screen.EntryDetail.createRoute(
                                     expression,
@@ -167,61 +202,58 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                                 )
                             )
                         }
-                    }
-                )
-            }
+                    )
+                }
 
-            composable(Screen.Favorites.route) {
-                FavoritesScreen(
-                    onMenuClick = { scope.launch { drawerState.open() } },
-                    onEntryClick = { expression, reading ->
-                        navController.navigate(Screen.EntryDetail.createRoute(expression, reading))
-                    }
-                )
-            }
+                composable(
+                    route = Screen.EntryDetail.route,
+                    arguments = listOf(
+                        navArgument("expression") { type = NavType.StringType },
+                        navArgument("reading") { type = NavType.StringType }
+                    )
+                ) { backStack ->
+                    val expression = backStack.arguments?.getString("expression")?.dec() ?: ""
+                    val reading = backStack.arguments?.getString("reading")?.dec() ?: ""
+                    backStack.arguments?.putString("expression", expression)
+                    backStack.arguments?.putString("reading", reading)
 
-            composable(
-                route = Screen.EntryDetail.route,
-                arguments = listOf(
-                    navArgument("expression") { type = NavType.StringType },
-                    navArgument("reading") { type = NavType.StringType }
-                )
-            ) { backStack ->
-                val expression = backStack.arguments?.getString("expression")?.dec() ?: ""
-                val reading = backStack.arguments?.getString("reading")?.dec() ?: ""
-                backStack.arguments?.putString("expression", expression)
-                backStack.arguments?.putString("reading", reading)
+                    EntryDetailScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = {
+                            if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                navController.popBackStack()
+                            }
+                        },
+                        onKanjiClick = { character ->
+                            navController.navigate(Screen.KanjiDetail.createRoute(character))
+                        }
+                    )
+                }
 
-                EntryDetailScreen(
-                    onBack = {
+                composable(
+                    route = Screen.KanjiDetail.route,
+                    arguments = listOf(navArgument("character") { type = NavType.StringType })
+                ) { backStack ->
+                    val character = backStack.arguments?.getString("character")?.dec() ?: ""
+                    backStack.arguments?.putString("character", character)
+
+                    KanjiDetailScreen(modifier = Modifier.fillMaxSize(), onBack = {
                         if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
                             navController.popBackStack()
                         }
-                    },
-                    onKanjiClick = { character ->
-                        navController.navigate(Screen.KanjiDetail.createRoute(character))
-                    }
-                )
-            }
+                    })
+                }
 
-            composable(
-                route = Screen.KanjiDetail.route,
-                arguments = listOf(navArgument("character") { type = NavType.StringType })
-            ) { backStack ->
-                val character = backStack.arguments?.getString("character")?.dec() ?: ""
-                backStack.arguments?.putString("character", character)
-
-                KanjiDetailScreen(onBack = {
-                    if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
-                        navController.popBackStack()
-                    }
-                })
-            }
-
-            composable(Screen.About.route) {
-                AboutScreen(onMenuClick = { scope.launch { drawerState.open() } })
+                composable(Screen.About.route) {
+                    AboutScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        onMenuClick = { scope.launch { drawerState.open() } })
+                }
             }
         }
+
     }
 }
 

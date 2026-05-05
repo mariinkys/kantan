@@ -60,7 +60,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun KanjiDetailScreen(
     onBack: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
     viewModel: KanjiDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()

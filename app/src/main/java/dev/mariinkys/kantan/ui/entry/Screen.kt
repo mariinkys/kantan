@@ -53,14 +53,14 @@ import kotlinx.coroutines.launch
 fun EntryDetailScreen(
     onBack: () -> Unit,
     onKanjiClick: (character: String) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
     viewModel: EntryDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
 
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = {

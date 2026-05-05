@@ -59,7 +59,6 @@ fun SearchScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(vertical = 48.dp)
     ) {
         SearchBar(
             query = viewModel.query,
