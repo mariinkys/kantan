@@ -10,8 +10,10 @@
 <h3>Kantan is an Open Source Japanese dictionary and learning tool for Android</h3>
 
   <img alt="Main Window" width="320" src="resources/screenshots/main-light.png"/>
-  <img alt="Entry Window" width="320" src="resources/screenshots/entry-light.png"/>
-  <img alt="Kanji Window" width="320" src="resources/screenshots/kanji-light.png"/>
+  <img alt="Character Recognition Window" width="320" src="resources/screenshots/char-recognition-light.png"/>
+  <img alt="Term Details Window" width="320" src="resources/screenshots/term-light.png"/>
+  <img alt="Term Details Window Kanji Tab" width="320" src="resources/screenshots/term-kanji-light.png"/>
+  <img alt="Kanji Details Window" width="320" src="resources/screenshots/kanji-details-light.png"/>
 
 # [Android will become a locked-down platform, FIGHT BACK!](https://keepandroidopen.org/)
 
@@ -30,9 +32,13 @@
 
 ## Build Variants
 
-- Full: Full application, requires internet connection (only once, to download the model) and play
-  services for handwriting detection.
-- Foss: Does not require internet or play services but does not offer handwriting detection.
+| Feature                   | **Full**            | **FOSS**     |
+|:--------------------------|:--------------------|:-------------|
+| **Google Play Services**  | Required            | Not Required |
+| **Internet Access**       | Required (One-time) | Not Required |
+| **Handwriting Detection** | Yes                 | No           |
+
+The full app is recommended for most users.
 
 ## App Description
 
