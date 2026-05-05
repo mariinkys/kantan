@@ -32,7 +32,7 @@ data class TermEntity(
 
 // FTS4 virtual table
 //
-// Intentionally NOT using contentEntity — that links via rowid which breaks when
+// Intentionally NOT using contentEntity, that links via rowid which breaks when
 // insertAll() silently ignores duplicate rows (rowids then diverge).
 // Instead, we store `expression` and join back to `terms` on that column.
 

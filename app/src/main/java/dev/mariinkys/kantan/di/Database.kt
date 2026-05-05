@@ -1,6 +1,9 @@
 package dev.mariinkys.kantan.di
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import androidx.work.WorkManager
 import dagger.Module
@@ -12,6 +15,9 @@ import dev.mariinkys.kantan.data.local.KantanDatabase
 import dev.mariinkys.kantan.data.local.dao.KanjiDao
 import dev.mariinkys.kantan.data.local.dao.TermDao
 import javax.inject.Singleton
+
+private val Context.favoritesDataStore: DataStore<Preferences>
+        by preferencesDataStore(name = "favorites")
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -29,6 +35,11 @@ object DatabaseModule {
 
     @Provides
     fun provideKanjiDao(db: KantanDatabase): KanjiDao = db.kanjiDao()
+
+    @Provides
+    @Singleton
+    fun provideFavoritesDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
+        context.favoritesDataStore
 
     @Provides
     @Singleton
