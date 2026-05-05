@@ -9,11 +9,11 @@
 
 <h3>Kantan is an Open Source Japanese dictionary and learning tool for Android</h3>
 
-  <img alt="Main Window" width="320" src="resources/screenshots/main-light.png"/>
-  <img alt="Character Recognition Window" width="320" src="resources/screenshots/char-recognition-light.png"/>
-  <img alt="Term Details Window" width="320" src="resources/screenshots/term-light.png"/>
-  <img alt="Term Details Window Kanji Tab" width="320" src="resources/screenshots/term-kanji-light.png"/>
-  <img alt="Kanji Details Window" width="320" src="resources/screenshots/kanji-details-light.png"/>
+  <img alt="Main Window" width="160" src="resources/screenshots/main-light.png"/>
+  <img alt="Character Recognition Window" width="160" src="resources/screenshots/char-recognition-light.png"/>
+  <img alt="Term Details Window" width="160" src="resources/screenshots/term-light.png"/>
+  <img alt="Term Details Window Kanji Tab" width="160" src="resources/screenshots/term-kanji-light.png"/>
+  <img alt="Kanji Details Window" width="160" src="resources/screenshots/kanji-details-light.png"/>
 
 # [Android will become a locked-down platform, FIGHT BACK!](https://keepandroidopen.org/)
 
