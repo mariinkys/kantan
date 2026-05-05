@@ -32,7 +32,7 @@ data class TermEntity(
 
 // FTS4 virtual table
 //
-// Intentionally NOT using contentEntity — that links via rowid which breaks when
+// Intentionally NOT using contentEntity, that links via rowid which breaks when
 // insertAll() silently ignores duplicate rows (rowids then diverge).
 // Instead, we store `expression` and join back to `terms` on that column.
 
@@ -61,4 +61,16 @@ data class KanjiEntity(
     val strokeCount: Int?,
     val jlptLevel: Int?,
     val frequency: Int?
+)
+
+// Entities in the favorite list
+
+@Entity(
+    tableName = "favorites",
+    primaryKeys = ["expression", "reading"]
+)
+data class FavoriteEntity(
+    val expression: String,
+    val reading: String,
+    val savedAt: Long = System.currentTimeMillis()
 )

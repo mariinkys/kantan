@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.DrawerValue
@@ -36,6 +37,7 @@ import androidx.navigation.navArgument
 import dev.mariinkys.kantan.R
 import dev.mariinkys.kantan.ui.AboutScreen
 import dev.mariinkys.kantan.ui.entry.EntryDetailScreen
+import dev.mariinkys.kantan.ui.favorites.FavoritesScreen
 import dev.mariinkys.kantan.ui.kanji.KanjiDetailScreen
 import dev.mariinkys.kantan.ui.search.SearchScreen
 import kotlinx.coroutines.launch
@@ -49,6 +51,8 @@ sealed class Screen(val route: String) {
     data object Search : Screen("search")
 
     data object About : Screen("about")
+
+    data object Favorites : Screen("favorites")
 
     data object EntryDetail : Screen("entry/{expression}/{reading}") {
         fun createRoute(expression: String, reading: String) =
@@ -109,6 +113,24 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                 )
 
                 NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Favorite, contentDescription = null) },
+                    label = { Text("Favorites") },
+                    selected = currentRoute == Screen.Favorites.route,
+                    onClick = {
+                        navController.navigate(Screen.Favorites.route) {
+                            popUpTo(Screen.Search.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+
+                        scope.launch {
+                            drawerState.close()
+                        }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Info, contentDescription = null) },
                     label = { Text("About") },
                     selected = currentRoute == Screen.About.route,
@@ -145,6 +167,15 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                                 )
                             )
                         }
+                    }
+                )
+            }
+
+            composable(Screen.Favorites.route) {
+                FavoritesScreen(
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    onEntryClick = { expression, reading ->
+                        navController.navigate(Screen.EntryDetail.createRoute(expression, reading))
                     }
                 )
             }

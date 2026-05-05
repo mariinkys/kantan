@@ -5,7 +5,9 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.mariinkys.kantan.data.repository.DictionaryRepositoryImpl
+import dev.mariinkys.kantan.data.repository.FavoritesRepositoryImpl
 import dev.mariinkys.kantan.domain.repository.DictionaryRepository
+import dev.mariinkys.kantan.domain.repository.FavoritesRepository
 import javax.inject.Singleton
 
 // Despite what the IDE might say this is being used, the app will not compile without it (:
@@ -19,4 +21,8 @@ abstract class RepositoryModule {
     abstract fun bindDictionaryRepository(
         impl: DictionaryRepositoryImpl
     ): DictionaryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFavoritesRepository(impl: FavoritesRepositoryImpl): FavoritesRepository
 }

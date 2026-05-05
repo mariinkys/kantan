@@ -9,6 +9,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.mariinkys.kantan.data.local.KantanDatabase
+import dev.mariinkys.kantan.data.local.dao.FavoriteDao
 import dev.mariinkys.kantan.data.local.dao.KanjiDao
 import dev.mariinkys.kantan.data.local.dao.TermDao
 import javax.inject.Singleton
@@ -29,6 +30,9 @@ object DatabaseModule {
 
     @Provides
     fun provideKanjiDao(db: KantanDatabase): KanjiDao = db.kanjiDao()
+
+    @Provides
+    fun provideFavoriteDao(db: KantanDatabase): FavoriteDao = db.favoriteDao()
 
     @Provides
     @Singleton
