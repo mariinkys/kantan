@@ -14,9 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Create
@@ -36,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
@@ -43,6 +47,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mariinkys.kantan.BuildConfig
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.ui.search.handwriting.HandwritingBottomSheet
@@ -55,6 +60,7 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     var showHandwriting by remember { mutableStateOf(false) }
+    val randomState by viewModel.randomEntryState.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -75,7 +81,11 @@ fun SearchScreen(
 
         Box(modifier = Modifier.fillMaxSize()) {
             when (val state = viewModel.searchState) {
-                is SearchState.Idle -> EmptyPrompt()
+                is SearchState.Idle -> EmptyPrompt(
+                    randomState = randomState,
+                    onEntryClick = onEntryClick
+                )
+
                 is SearchState.Loading -> CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center)
                 )
@@ -133,7 +143,7 @@ private fun SearchBar(
         modifier = modifier.focusRequester(focusRequester),
         placeholder = {
             Text(
-                "Search in Japanese, rōmaji or English…",
+                "Search here…",
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -220,12 +230,120 @@ private fun EntryRow(entry: DictionaryEntry, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EmptyPrompt() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun EmptyPrompt(
+    randomState: RandomEntryDetailState,
+    onEntryClick: (String, String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "Ready to learn?",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Text(
+            text = "Search using English, Rōmaji, or Kanji",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
+
+        when (randomState) {
+            is RandomEntryDetailState.Loading -> {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            }
+
+            is RandomEntryDetailState.Success -> {
+                DiscoveryCard(
+                    entry = randomState.entry,
+                    onClick = {
+                        onEntryClick(
+                            randomState.entry.expression,
+                            randomState.entry.reading
+                        )
+                    }
+                )
+            }
+
+            is RandomEntryDetailState.Error -> {
+                androidx.compose.material3.ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.extraLarge
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text(
+                            text = "Did you know?",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = "You can draw kanji directly by clicking the pencil icon if you don't know the reading!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiscoveryCard(
+    entry: DictionaryEntry,
+    onClick: () -> Unit
+) {
+    androidx.compose.material3.ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
             Text(
-                "Type to search the dictionary",
-                style = MaterialTheme.typography.bodyLarge,
+                text = "Did you know?",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "You can draw kanji directly by clicking the pencil icon if you don't know the reading!",
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            HorizontalDivider(modifier = Modifier.alpha(0.5f))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Featured Word", style = MaterialTheme.typography.labelSmall)
+            Text(
+                text = entry.expression,
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Text(
+                entry.longDefinition,
+                maxLines = 2,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

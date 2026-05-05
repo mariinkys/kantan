@@ -10,6 +10,8 @@ import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.domain.repository.DictionaryRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,6 +20,13 @@ sealed interface SearchState {
     data object Loading : SearchState
     data class Results(val entries: List<DictionaryEntry>) : SearchState
     data class NoResults(val query: String) : SearchState
+}
+
+sealed interface RandomEntryDetailState {
+    data object Loading : RandomEntryDetailState
+    data class Error(val message: String) : RandomEntryDetailState
+    data class Success(val entry: DictionaryEntry) :
+        RandomEntryDetailState
 }
 
 @HiltViewModel
@@ -32,6 +41,21 @@ class SearchViewModel @Inject constructor(
         private set
 
     private var searchJob: Job? = null
+
+    private val _randomEntryState =
+        MutableStateFlow<RandomEntryDetailState>(RandomEntryDetailState.Loading)
+    val randomEntryState: StateFlow<RandomEntryDetailState> = _randomEntryState
+
+    init {
+        viewModelScope.launch {
+            val entry = repository.getRandomEntry()
+            if (entry != null) {
+                _randomEntryState.value = RandomEntryDetailState.Success(entry)
+            } else {
+                _randomEntryState.value = RandomEntryDetailState.Error("No featured word today")
+            }
+        }
+    }
 
     fun onQueryChange(newQuery: String) {
         query = newQuery

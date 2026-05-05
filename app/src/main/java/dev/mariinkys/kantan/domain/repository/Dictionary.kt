@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 interface DictionaryRepository {
     fun search(query: String): Flow<List<DictionaryEntry>>
     suspend fun getEntry(expression: String, reading: String): DictionaryEntry?
+    suspend fun getRandomEntry(): DictionaryEntry?
     suspend fun getKanji(character: String): KanjiEntry?
     suspend fun getKanjiForWord(expression: String): List<KanjiEntry>
 }

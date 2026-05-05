@@ -66,6 +66,17 @@ interface TermDao {
     )
     suspend fun getByExpressionAndReading(expression: String, reading: String): List<TermEntity>
 
+    @Query(
+        """
+        SELECT * FROM terms 
+        WHERE id >= (ABS(RANDOM()) % (SELECT MAX(id) FROM terms))
+          AND (termTags LIKE '%⭐%')
+          AND (definitionTags LIKE '%v5r%' OR definitionTags LIKE '%n-pr%')
+        LIMIT 1
+        """
+    )
+    suspend fun getRandomCommonTerm(): TermEntity?
+
     @Query("SELECT COUNT(*) FROM terms")
     suspend fun count(): Int
 }

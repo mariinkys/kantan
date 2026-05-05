@@ -5,6 +5,7 @@ import dev.mariinkys.kantan.data.local.dao.TermDao
 import dev.mariinkys.kantan.data.local.entity.KanjiEntity
 import dev.mariinkys.kantan.data.local.entity.TermEntity
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
+import dev.mariinkys.kantan.domain.model.ExampleSentence
 import dev.mariinkys.kantan.domain.model.KanjiEntry
 import dev.mariinkys.kantan.domain.repository.DictionaryRepository
 import dev.mariinkys.kantan.util.RomajiConverter
@@ -50,6 +51,11 @@ class DictionaryRepositoryImpl @Inject constructor(
             ?.groupAndMap()
             ?.firstOrNull()
 
+    override suspend fun getRandomEntry(): DictionaryEntry? {
+        val randomSense = termDao.getRandomCommonTerm() ?: return null
+        return getEntry(randomSense.expression, randomSense.reading)
+    }
+
     override suspend fun getKanji(character: String): KanjiEntry? =
         kanjiDao.getByCharacter(character)?.toDomain()
 
@@ -85,7 +91,8 @@ class DictionaryRepositoryImpl @Inject constructor(
                         ?: "",
                     tags = rows.firstNotNullOfOrNull { it.termTags.takeIf { t -> t.isNotBlank() } }
                         ?: "",
-                    examples = Json.decodeFromString(rows.firstNotNullOfOrNull { it.examplesJson.takeIf { r -> r.isNotBlank() } } as String)
+                    examples = rows.firstNotNullOfOrNull { it.examplesJson.takeIf { json -> json.isNotBlank() } }
+                        ?.let { Json.decodeFromString<List<ExampleSentence>>(it) } ?: emptyList()
                 )
             }
 
