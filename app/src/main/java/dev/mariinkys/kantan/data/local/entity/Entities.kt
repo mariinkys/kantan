@@ -62,15 +62,3 @@ data class KanjiEntity(
     val jlptLevel: Int?,
     val frequency: Int?
 )
-
-// Entities in the favorite list
-
-@Entity(
-    tableName = "favorites",
-    primaryKeys = ["expression", "reading"]
-)
-data class FavoriteEntity(
-    val expression: String,
-    val reading: String,
-    val savedAt: Long = System.currentTimeMillis()
-)

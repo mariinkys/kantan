@@ -4,11 +4,9 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import dev.mariinkys.kantan.data.local.entity.FavoriteEntity
 import dev.mariinkys.kantan.data.local.entity.KanjiEntity
 import dev.mariinkys.kantan.data.local.entity.TermEntity
 import dev.mariinkys.kantan.data.local.entity.TermFtsEntity
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TermDao {
@@ -85,20 +83,4 @@ interface KanjiDao {
 
     @Query("SELECT COUNT(*) FROM kanji")
     suspend fun count(): Int
-}
-
-@Dao
-interface FavoriteDao {
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(favorite: FavoriteEntity)
-
-    @Query("DELETE FROM favorites WHERE expression = :expression AND reading = :reading")
-    suspend fun delete(expression: String, reading: String)
-
-    @Query("SELECT * FROM favorites ORDER BY savedAt DESC")
-    fun getAll(): Flow<List<FavoriteEntity>>
-    
-    @Query("SELECT COUNT(*) > 0 FROM favorites WHERE expression = :expression AND reading = :reading")
-    fun isFavorite(expression: String, reading: String): Flow<Boolean>
 }
