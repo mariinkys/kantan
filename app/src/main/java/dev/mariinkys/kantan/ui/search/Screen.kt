@@ -51,7 +51,7 @@ import dev.mariinkys.kantan.ui.search.handwriting.HandwritingBottomSheet
 fun SearchScreen(
     onMenuClick: () -> Unit,
     onEntryClick: (expression: String, reading: String) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     var showHandwriting by remember { mutableStateOf(false) }
