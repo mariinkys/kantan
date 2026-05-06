@@ -4,9 +4,28 @@ import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import kotlinx.coroutines.flow.Flow
 
 interface FavoritesRepository {
+    /**
+     * Retrieves all favorite entries, fully populated with definitions and variants.
+     */
     fun getAll(): Flow<List<DictionaryEntry>>
-    fun isFavorite(expression: String, reading: String): Flow<Boolean>
-    suspend fun add(expression: String, reading: String)
-    suspend fun remove(expression: String, reading: String)
-    suspend fun toggle(expression: String, reading: String)
+
+    /**
+     * Checks if a word is favorite using its unique sequence ID.
+     */
+    fun isFavorite(id: Int): Flow<Boolean>
+
+    /**
+     * Adds an entry to favorites by its sequence ID.
+     */
+    suspend fun add(id: Int)
+
+    /**
+     * Removes an entry from favorites by its sequence ID.
+     */
+    suspend fun remove(id: Int)
+
+    /**
+     * Toggles the favorite status for a given sequence ID.
+     */
+    suspend fun toggle(id: Int)
 }

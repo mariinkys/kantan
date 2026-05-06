@@ -167,13 +167,17 @@ class DictionaryImportWorker @AssistedInject constructor(
 
             is JsonArray -> node.forEach { parseStructuredContent(it, glosses, examples, info) }
             is JsonObject -> {
-                val tag = node["tag"]?.jsonPrimitive?.content
                 val dataContent = node["data"]?.jsonObject?.get("content")?.jsonPrimitive?.content
                 val content = node["content"]
 
                 when (dataContent) {
                     "glossary" -> extractGlossary(content, glosses)
                     "examples" -> extractExamples(content, examples)
+                    "references" -> {
+                        val refText = flatText(node).trim()
+                        if (refText.isNotBlank()) info.add(refText)
+                    }
+
                     "formsTable" -> { /* we skip them, forms rows handled separately */
                     }
 
@@ -191,7 +195,9 @@ class DictionaryImportWorker @AssistedInject constructor(
         val items = content as? JsonArray ?: return
         for (item in items) {
             val text = flatText(item).trim()
-            if (text.isNotBlank()) glosses.add(text)
+            if (text.isNotBlank()) {
+                glosses.add(text)
+            }
         }
     }
 
@@ -223,10 +229,16 @@ class DictionaryImportWorker @AssistedInject constructor(
     /** Recursively collects all text content from a node as a flat string. */
     private fun flatText(node: JsonElement): String = when (node) {
         is JsonPrimitive -> node.content
-        is JsonArray -> node.joinToString(" ") { flatText(it) }
+        is JsonArray -> node.joinToString("") { flatText(it) }
         is JsonObject -> {
+            val text = node["text"]?.jsonPrimitive?.content
             val content = node["content"]
-            if (content != null) flatText(content) else ""
+
+            when {
+                text != null -> text
+                content != null -> flatText(content)
+                else -> ""
+            }
         }
     }
 

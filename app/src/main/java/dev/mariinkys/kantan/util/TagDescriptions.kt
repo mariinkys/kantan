@@ -24,6 +24,7 @@ private val TAG_DESCRIPTIONS: Map<String, String> = mapOf(
     "exp" to "Expression",
     "int" to "Interjection",
     "n" to "Noun",
+    "1" to "Noun",
     "n-adv" to "Adverbial noun",
     "n-pr" to "Proper noun",
     "n-pref" to "Noun prefix",

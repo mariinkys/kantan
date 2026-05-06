@@ -36,7 +36,7 @@ import dev.mariinkys.kantan.domain.model.DictionaryEntry
 
 @Composable
 fun FavoritesScreen(
-    onEntryClick: (expression: String, reading: String) -> Unit,
+    onEntryClick: (sequence: Int) -> Unit,
     onMenuClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier,
@@ -97,12 +97,12 @@ fun FavoritesScreen(
                     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
                         items(
                             items = s.entries,
-                            key = { "${it.expression}|${it.reading}" }
+                            key = { "${it.id}" }
                         ) { entry ->
                             FavoriteRow(
                                 entry = entry,
-                                onClick = { onEntryClick(entry.expression, entry.reading) },
-                                onRemove = { viewModel.remove(entry.expression, entry.reading) }
+                                onClick = { onEntryClick(entry.id) },
+                                onRemove = { viewModel.remove(entry.id) }
                             )
                             HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
                         }
