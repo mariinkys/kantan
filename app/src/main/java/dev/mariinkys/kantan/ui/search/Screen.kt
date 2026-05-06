@@ -219,7 +219,7 @@ private fun EntryRow(entry: DictionaryEntry, onClick: () -> Unit) {
         }
         Spacer(Modifier.width(12.dp))
         Text(
-            text = entry.longDefinition,
+            text = entry.shortDefinition,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
@@ -341,7 +341,7 @@ private fun DiscoveryCard(
                 style = MaterialTheme.typography.headlineMedium
             )
             Text(
-                entry.longDefinition,
+                entry.shortDefinition,
                 maxLines = 2,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

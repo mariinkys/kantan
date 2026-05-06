@@ -1,14 +1,17 @@
 package dev.mariinkys.kantan.data.repository
 
+import dev.mariinkys.kantan.data.local.StoredSense
 import dev.mariinkys.kantan.data.local.dao.KanjiDao
 import dev.mariinkys.kantan.data.local.dao.TermDao
 import dev.mariinkys.kantan.data.local.entity.KanjiEntity
 import dev.mariinkys.kantan.data.local.entity.TermEntity
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
-import dev.mariinkys.kantan.domain.model.ExampleSentence
+import dev.mariinkys.kantan.domain.model.Example
 import dev.mariinkys.kantan.domain.model.KanjiEntry
+import dev.mariinkys.kantan.domain.model.Sense
 import dev.mariinkys.kantan.domain.repository.DictionaryRepository
 import dev.mariinkys.kantan.util.RomajiConverter
+import dev.mariinkys.kantan.util.resolveTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -22,10 +25,11 @@ class DictionaryRepositoryImpl @Inject constructor(
     private val kanjiDao: KanjiDao
 ) : DictionaryRepository {
 
+    private val json = Json { ignoreUnknownKeys = true }
+
     override fun search(query: String): Flow<List<DictionaryEntry>> {
         val q = query.trim()
         if (q.isBlank()) return flowOf(emptyList())
-
         return flow {
             val rows = if (RomajiConverter.isJapanese(q)) {
                 termDao.searchByPrefix(q)
@@ -37,7 +41,6 @@ class DictionaryRepositoryImpl @Inject constructor(
                 val ftsRows = if (ftsQuery.isNotBlank())
                     runCatching { termDao.searchByFts(ftsQuery) }.getOrElse { emptyList() }
                 else emptyList()
-                // Deduplicate by id before grouping
                 val seen = mutableSetOf<Long>()
                 (prefixRows + ftsRows).filter { seen.add(it.id) }
             }
@@ -66,33 +69,34 @@ class DictionaryRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Groups a flat list of TermEntity rows (one per JMdict sense) into one
-     * DictionaryEntry per (expression, reading) pair, merging all definitions.
-     *
-     * The input list is already ordered by relevance from the DAO query, so
-     * `groupBy` preserves that order — the first entry seen for each key
-     * determines the group's position in the output list.
+     * Groups flat TermEntity rows into one DictionaryEntry per (expression, reading).
+     * Each row becomes one Sense — preserving POS, glosses, and examples separately.
+     * "forms" rows (definitionTags == "forms") are skipped — they're metadata tables,
+     * not definitions.
      */
     private fun List<TermEntity>.groupAndMap(): List<DictionaryEntry> =
         groupBy { it.expression to it.reading }
             .map { (key, rows) ->
                 val (expression, reading) = key
+                val senses = rows
+                    .filter { it.definitionTags != "forms" }
+                    .flatMap { entity ->
+                        runCatching {
+                            json.decodeFromString<List<StoredSense>>(entity.sensesJson)
+                                .map { it.toDomain() }
+                        }.getOrDefault(emptyList())
+                    }
+                    .filter { it.glosses.isNotEmpty() }
+                val rules =
+                    rows.firstNotNullOfOrNull { it.rules.takeIf { r -> r.isNotBlank() } } ?: ""
+                val tags =
+                    rows.firstNotNullOfOrNull { it.termTags.takeIf { t -> t.isNotBlank() } } ?: ""
                 DictionaryEntry(
                     expression = expression,
                     reading = reading,
-                    definitions = rows
-                        .flatMap { it.definitions }
-                        .map { it.trimStart('\n').trim() }
-                        .filter { it.isNotBlank() }
-                        .distinct(),
-                    rules = rows.firstNotNullOfOrNull { it.rules.takeIf { r -> r.isNotBlank() } }
-                        ?: "",
-                    definitionTags = rows.firstNotNullOfOrNull { it.definitionTags.takeIf { t -> t.isNotBlank() } }
-                        ?: "",
-                    tags = rows.firstNotNullOfOrNull { it.termTags.takeIf { t -> t.isNotBlank() } }
-                        ?: "",
-                    examples = rows.firstNotNullOfOrNull { it.examplesJson.takeIf { json -> json.isNotBlank() } }
-                        ?.let { Json.decodeFromString<List<ExampleSentence>>(it) } ?: emptyList()
+                    senses = senses,
+                    rules = rules,
+                    tags = tags
                 )
             }
 
@@ -104,6 +108,22 @@ class DictionaryRepositoryImpl @Inject constructor(
             .filter { it.length >= 2 }
         if (words.isEmpty()) return ""
         return words.joinToString(" ") { "$it*" }
+    }
+
+    private fun StoredSense.toDomain(): Sense {
+        val truePosTag = posTags.firstOrNull { it != "1" && it != "2" } ?: ""
+        val posLabel = when {
+            posTags.contains("forms") -> "Forms"
+            truePosTag.isNotBlank() -> resolveTag(truePosTag)
+            else -> ""
+        }
+        return Sense(
+            partOfSpeech = posLabel,
+            posTags = posTags.filter { it != "1" && it != "2" },
+            glosses = glosses,
+            examples = examples.map { Example(it.japanese, it.english) },
+            info = info
+        )
     }
 
     private fun KanjiEntity.toDomain() = KanjiEntry(

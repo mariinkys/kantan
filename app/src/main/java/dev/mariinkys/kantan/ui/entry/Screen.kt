@@ -1,24 +1,26 @@
 package dev.mariinkys.kantan.ui.entry
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -28,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -40,12 +41,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
-import dev.mariinkys.kantan.domain.model.ExampleSentence
+import dev.mariinkys.kantan.domain.model.Example
 import dev.mariinkys.kantan.domain.model.KanjiEntry
-import dev.mariinkys.kantan.util.resolveTag
+import dev.mariinkys.kantan.domain.model.Sense
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -172,126 +174,145 @@ private fun EntryDetailContent(
 @Composable
 private fun DefinitionsTab(entry: DictionaryEntry) {
     LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-
-        val tagCodes = buildList {
-            if (entry.definitionTags.isNotBlank()) addAll(entry.definitionTags.split(" "))
-            if (entry.tags.isNotBlank()) addAll(entry.tags.split(" "))
+        val wordTags = buildList {
             if (entry.rules.isNotBlank()) addAll(entry.rules.split(" "))
-        }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .filter { it.toIntOrNull() == null }
+            if (entry.tags.isNotBlank()) addAll(entry.tags.split(" "))
+        }.filter { it.isNotBlank() }.distinct()
 
-        if (tagCodes.isNotEmpty()) {
+        if (wordTags.isNotEmpty()) {
             item {
-                TagRow(tagCodes)
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    wordTags.forEach { tag ->
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(tag, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
             }
         }
 
-        // Numbered definitions
-        val cleanDefinitions = entry.definitions
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-        itemsIndexed(cleanDefinitions) { index, def ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+        // One section per sense
+        itemsIndexed(entry.senses) { index, sense ->
+            SenseSection(index = index + 1, sense = sense, isLast = index == entry.senses.lastIndex)
+        }
+    }
+}
+
+@Composable
+private fun SenseSection(index: Int, sense: Sense, isLast: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = if (index == 1) 4.dp else 16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // POS header row  e.g. "① Noun"
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Sense number badge
+            Box(
+                modifier = Modifier
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        RoundedCornerShape(50)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "${index + 1}.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(24.dp)
-                )
-                Text(
-                    text = def,
-                    style = MaterialTheme.typography.bodyMedium
+                    text = index.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Bold
                 )
             }
-
-            if (index < cleanDefinitions.lastIndex) {
-                HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+            // POS label
+            if (sense.partOfSpeech.isNotBlank()) {
+                Text(
+                    text = sense.partOfSpeech,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            // Additional POS tags as small chips (e.g. Transitive, Usually kana)
+            sense.posTags.drop(1).forEach { tag ->
+                SuggestionChip(
+                    onClick = {},
+                    label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
+                    modifier = Modifier.height(24.dp)
+                )
             }
         }
 
-        if (entry.examples.isNotEmpty()) {
-            item {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Text(
-                    text = "Examples",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-            }
-            itemsIndexed(entry.examples) { _, example ->
+        // Glosses — bold, as a clean numbered/bulleted list
+        sense.glosses.forEachIndexed { i, gloss ->
+            Text(
+                text = if (sense.glosses.size == 1) gloss
+                else "${i + 1}. $gloss",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+
+        // Info notes (See also, Usually written as, etc.)
+        sense.info.forEach { note ->
+            Text(
+                text = note,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontStyle = FontStyle.Italic,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+
+        // Example sentences
+        if (sense.examples.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            sense.examples.forEach { example ->
                 ExampleCard(example)
             }
         }
+
+        if (!isLast) {
+            HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
+        }
     }
 }
 
-@Composable
-private fun TagRow(tagCodes: List<String>) {
-    val posCategories = setOf(
-        "adj-i", "adj-ix", "adj-na", "adj-no", "adj-pn", "adj-f", "adj-t",
-        "adv", "adv-to", "aux", "aux-adj", "aux-v", "conj", "cop", "ctr",
-        "exp", "int", "n", "n-adv", "n-pr", "n-pref", "n-suf", "n-t",
-        "num", "pn", "pref", "prt", "suf", "unc",
-        "v1", "v1-s", "v5aru", "v5b", "v5g", "v5k", "v5k-s", "v5m",
-        "v5n", "v5r", "v5r-i", "v5s", "v5t", "v5u", "v5u-s", "v5uru",
-        "vi", "vk", "vn", "vr", "vs", "vs-c", "vs-i", "vs-s", "vt", "vz"
-    )
 
-    androidx.compose.foundation.layout.FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+@Composable
+private fun ExampleCard(example: Example) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        tagCodes.forEach { code ->
-            val label = resolveTag(code)
-            val isPos = code in posCategories
-            SuggestionChip(
-                onClick = {},
-                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-                colors = if (isPos) SuggestionChipDefaults.suggestionChipColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                ) else SuggestionChipDefaults.suggestionChipColors()
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExampleCard(example: ExampleSentence) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        Text(
+            text = "🇯🇵 ${example.japanese}",
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 15.sp
         )
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = example.japanese,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            if (example.english.isNotBlank()) {
-                Text(
-                    text = example.english,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontStyle = FontStyle.Italic
-                )
-            }
-        }
+        Text(
+            text = "🇬🇧 ${example.english}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

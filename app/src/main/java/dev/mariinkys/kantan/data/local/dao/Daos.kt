@@ -11,10 +11,10 @@ import dev.mariinkys.kantan.data.local.entity.TermFtsEntity
 @Dao
 interface TermDao {
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert()
     suspend fun insertAll(terms: List<TermEntity>): List<Long>
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert()
     suspend fun insertFts(entries: List<TermFtsEntity>)
 
     /**

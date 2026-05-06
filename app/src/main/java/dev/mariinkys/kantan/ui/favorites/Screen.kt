@@ -145,9 +145,9 @@ private fun FavoriteRow(
                 }
             }
 
-            if (entry.longDefinition.isNotBlank()) {
+            if (entry.shortDefinition.isNotBlank()) {
                 Text(
-                    text = entry.longDefinition,
+                    text = entry.shortDefinition,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,

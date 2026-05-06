@@ -34,10 +34,9 @@ class FavoritesRepositoryImpl @Inject constructor(
                     DictionaryEntry(
                         expression = expression,
                         reading = reading,
-                        definitions = emptyList(), // loaded on demand in detail screen
+                        senses = emptyList(),
                         rules = "",
-                        definitionTags = "",
-                        tags = ""
+                        tags = "",
                     )
                 }
         }
