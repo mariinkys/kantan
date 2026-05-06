@@ -17,9 +17,13 @@ fun List<TermEntity>.groupAndMap(): List<DictionaryEntry> {
 
             val allForms = rows.map { it.expression }.distinct()
 
-            // Only include readings from rows that aren't marked as non-standard
             val allReadings = rows
                 .filter { !it.termTags.contains("⛬") }
+                .map { it.reading }
+                .distinct()
+
+            val nonStandardReadings = rows
+                .filter { it.termTags.contains("⛬") }
                 .map { it.reading }
                 .distinct()
 
@@ -45,6 +49,7 @@ fun List<TermEntity>.groupAndMap(): List<DictionaryEntry> {
                 id = sequenceNumber,
                 expression = primaryRow.expression,
                 reading = allReadings.joinToString("、 "),
+                nonStandardReadings = nonStandardReadings,
                 variants = allForms,
                 senses = senses,
                 rules = rules,

@@ -1,9 +1,10 @@
 package dev.mariinkys.kantan.domain.model
 
 data class DictionaryEntry(
-    val id: Int,
+    val id: Int, // this is really the sequence in the dictionary
     val expression: String,
     val reading: String,
+    val nonStandardReadings: List<String> = emptyList(),
     val variants: List<String> = emptyList(),
     val senses: List<Sense>,
     val rules: String,

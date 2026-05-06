@@ -48,6 +48,7 @@ import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.domain.model.Example
 import dev.mariinkys.kantan.domain.model.KanjiEntry
 import dev.mariinkys.kantan.domain.model.Sense
+import dev.mariinkys.kantan.util.resolveTag
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,7 +87,7 @@ fun EntryDetailScreen(
                     }
                 },
                 actions = {
-                    // We only show the favorite button once the entry has loaded
+                    // only show the favorite button once the entry has loaded
                     if (state is EntryDetailState.Success) {
                         IconButton(onClick = viewModel::toggleFavorite) {
                             Icon(
@@ -180,18 +181,55 @@ private fun DefinitionsTab(entry: DictionaryEntry) {
         val wordTags = buildList {
             if (entry.rules.isNotBlank()) addAll(entry.rules.split(" "))
             if (entry.tags.isNotBlank()) addAll(entry.tags.split(" "))
-        }.filter { it.isNotBlank() }.distinct()
+        }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .mapNotNull { tag ->
+                val label = resolveTag(tag)
+                if (label.none { it.isLetterOrDigit() }) null else label
+            }
+            .distinct()
 
         if (wordTags.isNotEmpty()) {
             item {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    wordTags.forEach { tag ->
+                    wordTags.forEach { label ->
                         SuggestionChip(
                             onClick = {},
-                            label = { Text(tag, style = MaterialTheme.typography.labelSmall) }
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+            }
+        }
+
+        // Non-standard / irregular readings
+        if (entry.nonStandardReadings.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Non-standard readings:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    entry.nonStandardReadings.forEach { reading ->
+                        Text(
+                            text = reading,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontStyle = FontStyle.Italic
                         )
                     }
                 }
@@ -247,15 +285,18 @@ private fun SenseSection(index: Int, sense: Sense, isLast: Boolean) {
             }
             // Additional POS tags as small chips (e.g. Transitive, Usually kana)
             sense.posTags.drop(1).forEach { tag ->
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
-                    modifier = Modifier.height(24.dp)
-                )
+                val label = resolveTag(tag)
+                if (label.any { it.isLetterOrDigit() }) {
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                        modifier = Modifier.height(24.dp)
+                    )
+                }
             }
         }
 
-        // Glosses — bold, as a clean numbered/bulleted list
+        // Glosses
         sense.glosses.forEachIndexed { i, gloss ->
             Text(
                 text = if (sense.glosses.size == 1) gloss

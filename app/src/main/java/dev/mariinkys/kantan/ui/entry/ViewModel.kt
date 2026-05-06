@@ -43,14 +43,12 @@ class EntryDetailViewModel @Inject constructor(
 
     private fun loadEntry() {
         viewModelScope.launch {
-            // Use the new getEntry(sequence) method
             val entry = repository.getEntry(sequence)
             if (entry == null) {
                 _state.value = EntryDetailState.Error("Entry not found")
                 return@launch
             }
 
-            // Fetch kanji details based on the main expression
             val kanji = repository.getKanjiForWord(entry.expression)
             _state.value = EntryDetailState.Success(entry = entry, kanji = kanji)
         }
@@ -58,7 +56,6 @@ class EntryDetailViewModel @Inject constructor(
 
     fun toggleFavorite() {
         viewModelScope.launch {
-            // Toggle favorite using the unique sequence ID
             favoritesRepository.toggle(sequence)
         }
     }
