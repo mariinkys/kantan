@@ -10,10 +10,6 @@ import kotlinx.serialization.json.Json
 
 private val json = Json { ignoreUnknownKeys = true }
 
-/**
- * Groups flat TermEntity rows into one DictionaryEntry per sequence ID.
- * This ensures variants like 女 and 雌 share one definition block.
- */
 fun List<TermEntity>.groupAndMap(): List<DictionaryEntry> {
     return this.groupBy { it.sequence }
         .map { (sequenceNumber, rows) ->
