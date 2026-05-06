@@ -28,23 +28,29 @@ class EntryDetailViewModel @Inject constructor(
     private val favoritesRepository: FavoritesRepository
 ) : ViewModel() {
 
-    private val expression: String = checkNotNull(savedStateHandle["expression"])
-    private val reading: String = checkNotNull(savedStateHandle["reading"])
+    private val sequence: Int = checkNotNull(savedStateHandle["sequence"])
 
     private val _state = MutableStateFlow<EntryDetailState>(EntryDetailState.Loading)
     val state: StateFlow<EntryDetailState> = _state
 
     val isFavorite: StateFlow<Boolean> = favoritesRepository
-        .isFavorite(expression, reading)
+        .isFavorite(sequence)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     init {
+        loadEntry()
+    }
+
+    private fun loadEntry() {
         viewModelScope.launch {
-            val entry = repository.getEntry(expression, reading)
+            // Use the new getEntry(sequence) method
+            val entry = repository.getEntry(sequence)
             if (entry == null) {
                 _state.value = EntryDetailState.Error("Entry not found")
                 return@launch
             }
+
+            // Fetch kanji details based on the main expression
             val kanji = repository.getKanjiForWord(entry.expression)
             _state.value = EntryDetailState.Success(entry = entry, kanji = kanji)
         }
@@ -52,7 +58,8 @@ class EntryDetailViewModel @Inject constructor(
 
     fun toggleFavorite() {
         viewModelScope.launch {
-            favoritesRepository.toggle(expression, reading)
+            // Toggle favorite using the unique sequence ID
+            favoritesRepository.toggle(sequence)
         }
     }
 }

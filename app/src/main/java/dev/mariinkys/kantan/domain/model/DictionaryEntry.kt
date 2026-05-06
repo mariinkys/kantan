@@ -1,8 +1,10 @@
 package dev.mariinkys.kantan.domain.model
 
 data class DictionaryEntry(
+    val id: Int,
     val expression: String,
     val reading: String,
+    val variants: List<String> = emptyList(),
     val senses: List<Sense>,
     val rules: String,
     val tags: String

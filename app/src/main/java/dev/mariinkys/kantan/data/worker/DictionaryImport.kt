@@ -19,7 +19,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -74,14 +73,14 @@ class DictionaryImportWorker @AssistedInject constructor(
         val reading = this[1].jsonPrimitive.content
         val definitionTags = this[2].jsonPrimitive.content
         val rules = this[3].jsonPrimitive.content
-        val score = this[4].jsonPrimitive.int
+        val score = this[4].jsonPrimitive.content.toDouble().toInt()
         val rawDefs = this[5].jsonArray
-        val sequence = this[6].jsonPrimitive.int
+        val sequence = this[6].jsonPrimitive.content.toDouble().toInt()
         val termTags = this[7].jsonPrimitive.content
 
         val sense = parseSense(definitionTags, rawDefs)
         val sensesJson = json.encodeToString(listOf(sense))
-        // Flat gloss text for FTS — skip if this is a "forms" row
+        // Flat gloss text for FTS, skip if this is a "forms" row
         val definitionsText = if (definitionTags == "forms") ""
         else sense.glosses.joinToString(" ")
 
@@ -100,15 +99,6 @@ class DictionaryImportWorker @AssistedInject constructor(
 
     /**
      * Parses one term_bank row's definition array into a [StoredSense].
-     *
-     * The definition array elements can be:
-     *  - JsonPrimitive → plain gloss string
-     *  - JsonObject { type:"structured-content", content: [...] }
-     *    The content array contains typed ul/li structures:
-     *      ul[data.content="glossary"]  → li items are glosses
-     *      ul[data.content="examples"]  → li pairs are (jp sentence, en translation)
-     *      table[data.content="formsTable"] → variant forms table, skip as gloss
-     *  - JsonObject type:"text", text:"..."  → info/note string
      */
     private fun parseSense(definitionTags: String, rawDefs: JsonArray): StoredSense {
         val posTags = definitionTags.split(" ").filter { it.isNotBlank() }
@@ -151,7 +141,7 @@ class DictionaryImportWorker @AssistedInject constructor(
 
     /**
      * Walks a structured-content node tree, routing to the right extractor
-     * based on the [data.content] marker on ul/table elements.
+     * based on the content marker on ul/table elements.
      */
     private fun parseStructuredContent(
         node: JsonElement,
@@ -167,13 +157,17 @@ class DictionaryImportWorker @AssistedInject constructor(
 
             is JsonArray -> node.forEach { parseStructuredContent(it, glosses, examples, info) }
             is JsonObject -> {
-                val tag = node["tag"]?.jsonPrimitive?.content
                 val dataContent = node["data"]?.jsonObject?.get("content")?.jsonPrimitive?.content
                 val content = node["content"]
 
                 when (dataContent) {
                     "glossary" -> extractGlossary(content, glosses)
                     "examples" -> extractExamples(content, examples)
+                    "references" -> {
+                        val refText = flatText(node).trim()
+                        if (refText.isNotBlank()) info.add(refText)
+                    }
+
                     "formsTable" -> { /* we skip them, forms rows handled separately */
                     }
 
@@ -188,7 +182,11 @@ class DictionaryImportWorker @AssistedInject constructor(
     /** Extracts "li" text nodes from a glossary ul as individual glosses. */
     private fun extractGlossary(content: JsonElement?, glosses: MutableList<String>) {
         if (content == null) return
-        val items = content as? JsonArray ?: return
+        // content can be a single node OR an array of nodes we have to normalize to a list
+        val items: List<JsonElement> = when (content) {
+            is JsonArray -> content.toList()
+            else -> listOf(content) // single li object
+        }
         for (item in items) {
             val text = flatText(item).trim()
             if (text.isNotBlank()) glosses.add(text)
@@ -201,9 +199,14 @@ class DictionaryImportWorker @AssistedInject constructor(
      * A single ul can contain multiple (jp, en) pairs interleaved.
      */
     private fun extractExamples(content: JsonElement?, examples: MutableList<StoredExample>) {
-        if (content !is JsonArray) return
+        val items: List<JsonElement> = when (content) {
+            is JsonArray -> content.toList()
+            is JsonObject -> listOf(content)
+            else -> return
+        }
         var pendingJp: String? = null
-        for (item in content) {
+
+        for (item in items) {
             if (item !is JsonObject) continue
             val lang = item["lang"]?.jsonPrimitive?.content
             val text = flatText(item).trim()
@@ -220,13 +223,19 @@ class DictionaryImportWorker @AssistedInject constructor(
         }
     }
 
-    /** Recursively collects all text content from a node as a flat string. */
+    /** Collects all text content from a node as a flat string. */
     private fun flatText(node: JsonElement): String = when (node) {
         is JsonPrimitive -> node.content
-        is JsonArray -> node.joinToString(" ") { flatText(it) }
+        is JsonArray -> node.joinToString("") { flatText(it) }
         is JsonObject -> {
+            val text = node["text"]?.jsonPrimitive?.content
             val content = node["content"]
-            if (content != null) flatText(content) else ""
+
+            when {
+                text != null -> text
+                content != null -> flatText(content)
+                else -> ""
+            }
         }
     }
 

@@ -58,9 +58,8 @@ sealed class Screen(val route: String) {
 
     data object Favorites : Screen("favorites")
 
-    data object EntryDetail : Screen("entry/{expression}/{reading}") {
-        fun createRoute(expression: String, reading: String) =
-            "entry/${expression.enc()}/${reading.enc()}"
+    data object EntryDetail : Screen("entry/{sequence}") {
+        fun createRoute(sequence: Int) = "entry/$sequence"
     }
 
     data object KanjiDetail : Screen("kanji/{character}") {
@@ -174,12 +173,11 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                             .fillMaxSize()
                             .padding(innerPadding),
                         onMenuClick = { scope.launch { drawerState.open() } },
-                        onEntryClick = { expression, reading ->
+                        onEntryClick = { sequence ->
                             if (it.lifecycle.currentState == Lifecycle.State.RESUMED) {
                                 navController.navigate(
                                     Screen.EntryDetail.createRoute(
-                                        expression,
-                                        reading
+                                        sequence
                                     )
                                 )
                             }
@@ -194,11 +192,10 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                             .padding(innerPadding),
                         snackbarHostState = snackbarHostState,
                         onMenuClick = { scope.launch { drawerState.open() } },
-                        onEntryClick = { expression, reading ->
+                        onEntryClick = { sequence ->
                             navController.navigate(
                                 Screen.EntryDetail.createRoute(
-                                    expression,
-                                    reading
+                                    sequence
                                 )
                             )
                         }
@@ -208,14 +205,11 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                 composable(
                     route = Screen.EntryDetail.route,
                     arguments = listOf(
-                        navArgument("expression") { type = NavType.StringType },
-                        navArgument("reading") { type = NavType.StringType }
+                        navArgument("sequence") { type = NavType.IntType }
                     )
                 ) { backStack ->
-                    val expression = backStack.arguments?.getString("expression")?.dec() ?: ""
-                    val reading = backStack.arguments?.getString("reading")?.dec() ?: ""
-                    backStack.arguments?.putString("expression", expression)
-                    backStack.arguments?.putString("reading", reading)
+                    val sequence = backStack.arguments?.getString("sequence")?.dec() ?: ""
+                    backStack.arguments?.putString("sequence", sequence)
 
                     EntryDetailScreen(
                         modifier = Modifier.fillMaxSize(),

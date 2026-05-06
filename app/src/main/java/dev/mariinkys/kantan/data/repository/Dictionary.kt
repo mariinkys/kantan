@@ -1,31 +1,24 @@
 package dev.mariinkys.kantan.data.repository
 
-import dev.mariinkys.kantan.data.local.StoredSense
 import dev.mariinkys.kantan.data.local.dao.KanjiDao
 import dev.mariinkys.kantan.data.local.dao.TermDao
 import dev.mariinkys.kantan.data.local.entity.KanjiEntity
-import dev.mariinkys.kantan.data.local.entity.TermEntity
+import dev.mariinkys.kantan.data.mapper.groupAndMap
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
-import dev.mariinkys.kantan.domain.model.Example
 import dev.mariinkys.kantan.domain.model.KanjiEntry
-import dev.mariinkys.kantan.domain.model.Sense
 import dev.mariinkys.kantan.domain.repository.DictionaryRepository
 import dev.mariinkys.kantan.util.RomajiConverter
-import dev.mariinkys.kantan.util.resolveTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
 class DictionaryRepositoryImpl @Inject constructor(
     private val termDao: TermDao,
     private val kanjiDao: KanjiDao
 ) : DictionaryRepository {
-
-    private val json = Json { ignoreUnknownKeys = true }
 
     override fun search(query: String): Flow<List<DictionaryEntry>> {
         val q = query.trim()
@@ -48,15 +41,15 @@ class DictionaryRepositoryImpl @Inject constructor(
         }.flowOn(Dispatchers.IO)
     }
 
-    override suspend fun getEntry(expression: String, reading: String): DictionaryEntry? =
-        termDao.getByExpressionAndReading(expression, reading)
+    override suspend fun getEntry(sequence: Int): DictionaryEntry? =
+        termDao.getBySequences(listOf(sequence))
             .takeIf { it.isNotEmpty() }
             ?.groupAndMap()
             ?.firstOrNull()
 
     override suspend fun getRandomEntry(): DictionaryEntry? {
         val randomSense = termDao.getRandomCommonTerm() ?: return null
-        return getEntry(randomSense.expression, randomSense.reading)
+        return getEntry(randomSense.sequence)
     }
 
     override suspend fun getKanji(character: String): KanjiEntry? =
@@ -68,38 +61,6 @@ class DictionaryRepositoryImpl @Inject constructor(
         return kanjiDao.getByCharacters(chars).map { it.toDomain() }
     }
 
-    /**
-     * Groups flat TermEntity rows into one DictionaryEntry per (expression, reading).
-     * Each row becomes one Sense — preserving POS, glosses, and examples separately.
-     * "forms" rows (definitionTags == "forms") are skipped — they're metadata tables,
-     * not definitions.
-     */
-    private fun List<TermEntity>.groupAndMap(): List<DictionaryEntry> =
-        groupBy { it.expression to it.reading }
-            .map { (key, rows) ->
-                val (expression, reading) = key
-                val senses = rows
-                    .filter { it.definitionTags != "forms" }
-                    .flatMap { entity ->
-                        runCatching {
-                            json.decodeFromString<List<StoredSense>>(entity.sensesJson)
-                                .map { it.toDomain() }
-                        }.getOrDefault(emptyList())
-                    }
-                    .filter { it.glosses.isNotEmpty() }
-                val rules =
-                    rows.firstNotNullOfOrNull { it.rules.takeIf { r -> r.isNotBlank() } } ?: ""
-                val tags =
-                    rows.firstNotNullOfOrNull { it.termTags.takeIf { t -> t.isNotBlank() } } ?: ""
-                DictionaryEntry(
-                    expression = expression,
-                    reading = reading,
-                    senses = senses,
-                    rules = rules,
-                    tags = tags
-                )
-            }
-
     private fun buildFtsQuery(raw: String): String {
         val words = raw
             .replace(Regex("""["()\-*:]+"""), " ")
@@ -108,22 +69,6 @@ class DictionaryRepositoryImpl @Inject constructor(
             .filter { it.length >= 2 }
         if (words.isEmpty()) return ""
         return words.joinToString(" ") { "$it*" }
-    }
-
-    private fun StoredSense.toDomain(): Sense {
-        val truePosTag = posTags.firstOrNull { it != "1" && it != "2" } ?: ""
-        val posLabel = when {
-            posTags.contains("forms") -> "Forms"
-            truePosTag.isNotBlank() -> resolveTag(truePosTag)
-            else -> ""
-        }
-        return Sense(
-            partOfSpeech = posLabel,
-            posTags = posTags.filter { it != "1" && it != "2" },
-            glosses = glosses,
-            examples = examples.map { Example(it.japanese, it.english) },
-            info = info
-        )
     }
 
     private fun KanjiEntity.toDomain() = KanjiEntry(
