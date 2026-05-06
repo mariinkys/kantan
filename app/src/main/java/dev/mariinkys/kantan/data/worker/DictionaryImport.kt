@@ -19,7 +19,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -74,9 +73,9 @@ class DictionaryImportWorker @AssistedInject constructor(
         val reading = this[1].jsonPrimitive.content
         val definitionTags = this[2].jsonPrimitive.content
         val rules = this[3].jsonPrimitive.content
-        val score = this[4].jsonPrimitive.int
+        val score = this[4].jsonPrimitive.content.toDouble().toInt()
         val rawDefs = this[5].jsonArray
-        val sequence = this[6].jsonPrimitive.int
+        val sequence = this[6].jsonPrimitive.content.toDouble().toInt()
         val termTags = this[7].jsonPrimitive.content
 
         val sense = parseSense(definitionTags, rawDefs)

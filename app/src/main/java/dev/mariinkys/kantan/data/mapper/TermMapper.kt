@@ -16,7 +16,12 @@ fun List<TermEntity>.groupAndMap(): List<DictionaryEntry> {
             val primaryRow = rows.maxByOrNull { it.score } ?: rows.first()
 
             val allForms = rows.map { it.expression }.distinct()
-            val allReadings = rows.map { it.reading }.distinct()
+
+            // Only include readings from rows that aren't marked as non-standard
+            val allReadings = rows
+                .filter { !it.termTags.contains("⛬") }
+                .map { it.reading }
+                .distinct()
 
             val senses = rows.flatMap { row ->
                 runCatching {
