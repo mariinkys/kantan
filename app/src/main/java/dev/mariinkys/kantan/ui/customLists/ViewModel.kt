@@ -48,6 +48,10 @@ class CustomListsViewModel @Inject constructor(
 
     fun createList(name: String) = viewModelScope.launch { repository.createList(name) }
 
+    fun renameList(listId: Int, name: String) = viewModelScope.launch {
+        repository.renameList(listId, name)
+    }
+    
     fun deleteList(id: Int) = viewModelScope.launch { repository.deleteList(id) }
 }
 
