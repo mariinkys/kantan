@@ -1,24 +1,27 @@
 package dev.mariinkys.kantan.ui.entry
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -28,7 +31,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -37,22 +39,41 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.mariinkys.kantan.data.repository.isKanji
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
-import dev.mariinkys.kantan.domain.model.ExampleSentence
+import dev.mariinkys.kantan.domain.model.Example
 import dev.mariinkys.kantan.domain.model.KanjiEntry
+import dev.mariinkys.kantan.domain.model.Sense
 import dev.mariinkys.kantan.util.resolveTag
 import kotlinx.coroutines.launch
+
+
+// Annotation tag used in AnnotatedString to mark tappable "see also" terms
+private const val SEE_ALSO_TAG = "SEE_ALSO"
+
+// Matches "see: <term> optional gloss", the Japanese term is group 1, trailing gloss is group 2
+private val SEE_ALSO_REGEX = Regex("""^see:\s+(\S+)\s*(.*)$""", RegexOption.IGNORE_CASE)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EntryDetailScreen(
     onBack: () -> Unit,
     onKanjiClick: (character: String) -> Unit,
+    // Called when the user taps a "See also" term or any cross-reference link.
+    onTermClick: (term: String) -> Unit,
     modifier: Modifier,
     viewModel: EntryDetailViewModel = hiltViewModel()
 ) {
@@ -67,8 +88,28 @@ fun EntryDetailScreen(
                     if (state is EntryDetailState.Success) {
                         val s = state as EntryDetailState.Success
                         Column {
-                            Text(s.entry.expression, style = MaterialTheme.typography.titleLarge)
-                            if (s.entry.reading != s.entry.expression) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    s.entry.expression,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+
+                                val altForms = s.entry.variants
+                                    .filter { it != s.entry.expression }
+                                    .filter { v -> v.any { it.isKanji() } }
+                                if (altForms.isNotEmpty()) {
+                                    Text(
+                                        text = "· ${altForms.joinToString("、")}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            if (s.entry.reading.isNotBlank() && s.entry.reading != s.entry.expression) {
                                 Text(
                                     s.entry.reading,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -84,7 +125,7 @@ fun EntryDetailScreen(
                     }
                 },
                 actions = {
-                    // We only show the favorite button once the entry has loaded
+                    // only show the favorite button once the entry has loaded
                     if (state is EntryDetailState.Success) {
                         IconButton(onClick = viewModel::toggleFavorite) {
                             Icon(
@@ -126,6 +167,7 @@ fun EntryDetailScreen(
                 entry = s.entry,
                 kanji = s.kanji,
                 onKanjiClick = onKanjiClick,
+                onTermClick = onTermClick,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -137,6 +179,7 @@ private fun EntryDetailContent(
     entry: DictionaryEntry,
     kanji: List<KanjiEntry>,
     onKanjiClick: (String) -> Unit,
+    onTermClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val tabs = buildList {
@@ -162,7 +205,7 @@ private fun EntryDetailContent(
             verticalAlignment = Alignment.Top
         ) { page ->
             when (tabs[page]) {
-                "Definitions" -> DefinitionsTab(entry)
+                "Definitions" -> DefinitionsTab(entry, onTermClick)
                 "Kanji" -> KanjiTab(kanji, onKanjiClick)
             }
         }
@@ -170,128 +213,256 @@ private fun EntryDetailContent(
 }
 
 @Composable
-private fun DefinitionsTab(entry: DictionaryEntry) {
+private fun DefinitionsTab(entry: DictionaryEntry, onTermClick: (String) -> Unit) {
     LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-
-        val tagCodes = buildList {
-            if (entry.definitionTags.isNotBlank()) addAll(entry.definitionTags.split(" "))
-            if (entry.tags.isNotBlank()) addAll(entry.tags.split(" "))
+        val wordTags = buildList {
             if (entry.rules.isNotBlank()) addAll(entry.rules.split(" "))
+            if (entry.tags.isNotBlank()) addAll(entry.tags.split(" "))
         }
             .filter { it.isNotBlank() }
             .distinct()
-            .filter { it.toIntOrNull() == null }
+            .mapNotNull { tag ->
+                val label = resolveTag(tag)
+                if (label.none { it.isLetterOrDigit() }) null else label
+            }
+            .distinct()
 
-        if (tagCodes.isNotEmpty()) {
+        if (wordTags.isNotEmpty()) {
             item {
-                TagRow(tagCodes)
+                FlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    wordTags.forEach { label ->
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
             }
         }
 
-        // Numbered definitions
-        val cleanDefinitions = entry.definitions
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-        itemsIndexed(cleanDefinitions) { index, def ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+        // Non-standard / irregular readings
+        if (entry.nonStandardReadings.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Non-standard readings:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    entry.nonStandardReadings.forEach { reading ->
+                        Text(
+                            text = reading,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontStyle = FontStyle.Italic
+                        )
+                    }
+                }
+            }
+        }
+
+        // One section per sense
+        itemsIndexed(entry.senses) { index, sense ->
+            SenseSection(
+                index = index + 1,
+                sense = sense,
+                isLast = index == entry.senses.lastIndex,
+                onTermClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun SenseSection(index: Int, sense: Sense, isLast: Boolean, onTermClick: (String) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = if (index == 1) 4.dp else 16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // POS header row  e.g. "① Noun"
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Sense number badge
+            Box(
+                modifier = Modifier
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        RoundedCornerShape(50)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "${index + 1}.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(24.dp)
-                )
-                Text(
-                    text = def,
-                    style = MaterialTheme.typography.bodyMedium
+                    text = index.toString(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Bold
                 )
             }
-
-            if (index < cleanDefinitions.lastIndex) {
-                HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+            // POS label
+            if (sense.partOfSpeech.isNotBlank()) {
+                Text(
+                    text = sense.partOfSpeech,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            // Additional POS tags as small chips (e.g. Transitive, Usually kana)
+            sense.posTags.drop(1).forEach { tag ->
+                val label = resolveTag(tag)
+                if (label.any { it.isLetterOrDigit() }) {
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                        modifier = Modifier.height(24.dp)
+                    )
+                }
             }
         }
 
-        if (entry.examples.isNotEmpty()) {
-            item {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                Text(
-                    text = "Examples",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-            }
-            itemsIndexed(entry.examples) { _, example ->
+        // Glosses
+        sense.glosses.forEachIndexed { i, gloss ->
+            Text(
+                text = if (sense.glosses.size == 1) gloss
+                else "${i + 1}. $gloss",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
+
+        // Info notes (See also, Usually written as, etc.)
+        sense.info.forEach { note ->
+            InfoNote(note = note, onTermClick = onTermClick)
+        }
+
+        // Example sentences
+        if (sense.examples.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            sense.examples.forEach { example ->
                 ExampleCard(example)
             }
         }
-    }
-}
 
-@Composable
-private fun TagRow(tagCodes: List<String>) {
-    val posCategories = setOf(
-        "adj-i", "adj-ix", "adj-na", "adj-no", "adj-pn", "adj-f", "adj-t",
-        "adv", "adv-to", "aux", "aux-adj", "aux-v", "conj", "cop", "ctr",
-        "exp", "int", "n", "n-adv", "n-pr", "n-pref", "n-suf", "n-t",
-        "num", "pn", "pref", "prt", "suf", "unc",
-        "v1", "v1-s", "v5aru", "v5b", "v5g", "v5k", "v5k-s", "v5m",
-        "v5n", "v5r", "v5r-i", "v5s", "v5t", "v5u", "v5u-s", "v5uru",
-        "vi", "vk", "vn", "vr", "vs", "vs-c", "vs-i", "vs-s", "vt", "vz"
-    )
-
-    androidx.compose.foundation.layout.FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        tagCodes.forEach { code ->
-            val label = resolveTag(code)
-            val isPos = code in posCategories
-            SuggestionChip(
-                onClick = {},
-                label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-                colors = if (isPos) SuggestionChipDefaults.suggestionChipColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                ) else SuggestionChipDefaults.suggestionChipColors()
-            )
+        if (!isLast) {
+            HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
         }
     }
 }
 
+
+/**
+ * Renders an info/note string.
+ *
+ * If the note matches the "see: <term> <gloss>" pattern produced by the importer,
+ * the Japanese term is rendered as a tappable underlined link. Everything else is
+ * plain italic text.
+ *
+ */
 @Composable
-private fun ExampleCard(example: ExampleSentence) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = example.japanese,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            if (example.english.isNotBlank()) {
-                Text(
-                    text = example.english,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontStyle = FontStyle.Italic
+private fun InfoNote(note: String, onTermClick: (String) -> Unit) {
+    val linkColor = MaterialTheme.colorScheme.primary
+    val baseColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val baseStyle = MaterialTheme.typography.bodySmall
+
+    val match = SEE_ALSO_REGEX.matchEntire(note.trim())
+
+    if (match != null) {
+        val term = match.groupValues[1]
+        val gloss = match.groupValues[2].trim()
+
+        val annotated = buildAnnotatedString {
+            withStyle(SpanStyle(color = baseColor, fontStyle = FontStyle.Italic)) {
+                append("See also: ")
+            }
+            withLink(
+                LinkAnnotation.Clickable(
+                    tag = SEE_ALSO_TAG,
+                    styles = TextLinkStyles(
+                        style = SpanStyle(
+                            color = linkColor,
+                            fontWeight = FontWeight.Medium,
+                            textDecoration = TextDecoration.Underline
+                        )
+                    ),
+                    linkInteractionListener = {
+                        // Strip furigana annotations like 女（じょ） → 女
+                        val cleanTerm = term
+                            .replace(Regex("""（[^）]*）"""), "")
+                            .replace(Regex("""\([^)]*\)"""), "")
+                            .trim()
+                        onTermClick(cleanTerm)
+                    }
                 )
+            ) {
+                append(term)
+            }
+            if (gloss.isNotBlank()) {
+                withStyle(SpanStyle(color = baseColor, fontStyle = FontStyle.Italic)) {
+                    append("  $gloss")
+                }
             }
         }
+
+        Text(
+            text = annotated,
+            style = baseStyle,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+    } else {
+        Text(
+            text = note,
+            style = baseStyle,
+            color = baseColor,
+            fontStyle = FontStyle.Italic,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun ExampleCard(example: Example) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                RoundedCornerShape(8.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = "🇯🇵 ${example.japanese}",
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 15.sp
+        )
+        Text(
+            text = "🇬🇧 ${example.english}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

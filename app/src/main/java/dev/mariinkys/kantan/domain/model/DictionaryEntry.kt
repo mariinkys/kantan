@@ -1,31 +1,31 @@
 package dev.mariinkys.kantan.domain.model
 
-/**
- * A single dictionary entry as shown in search results and the detail screen.
- * Decoupled from the Room entity so the UI never imports data-layer classes.
- */
 data class DictionaryEntry(
-    val expression: String,   // kanji/word form  e.g. "食べる"
-    val reading: String,      // kana reading     e.g. "たべる"
-    val definitions: List<String>,
-    val rules: String,        // inflection codes e.g. "v1" (ichidan verb)
-    val definitionTags: String, // "1 adj-na n"
-    val tags: String,         // term tags        e.g. "news ichi"
-    val examples: List<ExampleSentence> = emptyList()
+    val id: Int, // this is really the sequence in the dictionary
+    val expression: String,
+    val reading: String,
+    val nonStandardReadings: List<String> = emptyList(),
+    val variants: List<String> = emptyList(),
+    val senses: List<Sense>,
+    val rules: String,
+    val tags: String
 ) {
-    val longDefinition: String
-        get() {
-            val cleanDefinitions = definitions
-                .flatMap { def ->
-                    def.split(",")
-                }
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-
-            return when {
-                cleanDefinitions.isEmpty() -> ""
-                cleanDefinitions.size <= 3 -> cleanDefinitions.joinToString(", ")
-                else -> cleanDefinitions.take(3).joinToString(", ") + "..."
-            }
-        }
+    /** First gloss of first sense — for list/favorites display. */
+    val shortDefinition: String
+        get() = senses.firstOrNull()?.glosses?.firstOrNull()?.trim() ?: ""
 }
+
+data class Sense(
+    /** Human-readable POS string, e.g. "Noun", "Ichidan verb", "Expression" */
+    val partOfSpeech: String,
+    /** Raw POS tag chips for display, e.g. ["n"], ["v1", "vt"] */
+    val posTags: List<String>,
+    val glosses: List<String>,
+    val examples: List<Example>,
+    val info: List<String>      // "See also: X", misc notes
+)
+
+data class Example(
+    val japanese: String,
+    val english: String
+)

@@ -11,10 +11,10 @@ import dev.mariinkys.kantan.data.local.entity.TermFtsEntity
 @Dao
 interface TermDao {
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert()
     suspend fun insertAll(terms: List<TermEntity>): List<Long>
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert()
     suspend fun insertFts(entries: List<TermFtsEntity>)
 
     /**
@@ -56,15 +56,8 @@ interface TermDao {
     )
     suspend fun searchByFts(query: String, limit: Int = 200): List<TermEntity>
 
-    /** All rows for a specific (expression, reading) pair — used by the detail screen. */
-    @Query(
-        """
-        SELECT * FROM terms
-        WHERE expression = :expression AND reading = :reading
-        ORDER BY score DESC
-    """
-    )
-    suspend fun getByExpressionAndReading(expression: String, reading: String): List<TermEntity>
+    @Query("SELECT * FROM terms WHERE sequence IN (:sequences)")
+    suspend fun getBySequences(sequences: List<Int>): List<TermEntity>
 
     @Query(
         """

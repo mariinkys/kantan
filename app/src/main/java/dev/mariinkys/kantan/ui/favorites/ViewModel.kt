@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
-import dev.mariinkys.kantan.domain.repository.DictionaryRepository
 import dev.mariinkys.kantan.domain.repository.FavoritesRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +20,7 @@ sealed interface FavoritesState {
 
 @HiltViewModel
 class FavoritesViewModel @Inject constructor(
-    private val favoritesRepository: FavoritesRepository,
-    private val dictionaryRepository: DictionaryRepository
+    private val favoritesRepository: FavoritesRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<FavoritesState>(FavoritesState.Loading)
@@ -32,39 +30,27 @@ class FavoritesViewModel @Inject constructor(
     val events: SharedFlow<FavoritesEvent> = _events
 
     init {
-        // whenever the favorites set changes (add/remove), reload with definitions
         viewModelScope.launch {
             favoritesRepository.getAll()
-                .collect { stubs -> loadWithDefinitions(stubs) }
+                .collect { entries ->
+                    _state.value = FavoritesState.Ready(entries)
+                }
         }
     }
 
     fun refresh() {
         viewModelScope.launch {
             _state.value = FavoritesState.Loading
-            val stubs = favoritesRepository.getAll().first()
-            loadWithDefinitions(stubs)
+            val entries = favoritesRepository.getAll().first()
+            _state.value = FavoritesState.Ready(entries)
             _events.emit(FavoritesEvent.ShowSnackbar("Favorites Refreshed"))
         }
     }
 
-    fun remove(expression: String, reading: String) {
+    fun remove(sequence: Int) {
         viewModelScope.launch {
-            favoritesRepository.remove(expression, reading)
+            favoritesRepository.remove(sequence)
         }
-    }
-
-    /**
-     * For each saved (expression, reading) pair, fetch the full entry from the
-     * dictionary so definitions are always shown. Falls back to the stub (no
-     * definitions) if the word isn't found — handles the edge case where a
-     * dictionary update removed an entry the user had saved.
-     */
-    private suspend fun loadWithDefinitions(stubs: List<DictionaryEntry>) {
-        val full = stubs.map { stub ->
-            dictionaryRepository.getEntry(stub.expression, stub.reading) ?: stub
-        }
-        _state.value = FavoritesState.Ready(full)
     }
 }
 

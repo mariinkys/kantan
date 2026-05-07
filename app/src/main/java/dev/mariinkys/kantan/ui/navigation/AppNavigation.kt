@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -44,6 +45,7 @@ import dev.mariinkys.kantan.ui.entry.EntryDetailScreen
 import dev.mariinkys.kantan.ui.favorites.FavoritesScreen
 import dev.mariinkys.kantan.ui.kanji.KanjiDetailScreen
 import dev.mariinkys.kantan.ui.search.SearchScreen
+import dev.mariinkys.kantan.ui.search.SearchViewModel
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -58,9 +60,8 @@ sealed class Screen(val route: String) {
 
     data object Favorites : Screen("favorites")
 
-    data object EntryDetail : Screen("entry/{expression}/{reading}") {
-        fun createRoute(expression: String, reading: String) =
-            "entry/${expression.enc()}/${reading.enc()}"
+    data object EntryDetail : Screen("entry/{sequence}") {
+        fun createRoute(sequence: Int) = "entry/$sequence"
     }
 
     data object KanjiDetail : Screen("kanji/{character}") {
@@ -174,12 +175,11 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                             .fillMaxSize()
                             .padding(innerPadding),
                         onMenuClick = { scope.launch { drawerState.open() } },
-                        onEntryClick = { expression, reading ->
+                        onEntryClick = { sequence ->
                             if (it.lifecycle.currentState == Lifecycle.State.RESUMED) {
                                 navController.navigate(
                                     Screen.EntryDetail.createRoute(
-                                        expression,
-                                        reading
+                                        sequence
                                     )
                                 )
                             }
@@ -194,11 +194,10 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                             .padding(innerPadding),
                         snackbarHostState = snackbarHostState,
                         onMenuClick = { scope.launch { drawerState.open() } },
-                        onEntryClick = { expression, reading ->
+                        onEntryClick = { sequence ->
                             navController.navigate(
                                 Screen.EntryDetail.createRoute(
-                                    expression,
-                                    reading
+                                    sequence
                                 )
                             )
                         }
@@ -208,14 +207,17 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                 composable(
                     route = Screen.EntryDetail.route,
                     arguments = listOf(
-                        navArgument("expression") { type = NavType.StringType },
-                        navArgument("reading") { type = NavType.StringType }
+                        navArgument("sequence") { type = NavType.IntType }
                     )
                 ) { backStack ->
-                    val expression = backStack.arguments?.getString("expression")?.dec() ?: ""
-                    val reading = backStack.arguments?.getString("reading")?.dec() ?: ""
-                    backStack.arguments?.putString("expression", expression)
-                    backStack.arguments?.putString("reading", reading)
+                    val sequence = backStack.arguments?.getString("sequence")?.dec() ?: ""
+                    backStack.arguments?.putString("sequence", sequence)
+
+                    // Retrieve the same SearchViewModel instance that SearchScreen holds, so onQueryChange lands in the right state when we pop back.
+                    val searchEntry = remember(backStack) {
+                        navController.getBackStackEntry(Screen.Search.route)
+                    }
+                    val searchViewModel: SearchViewModel = hiltViewModel(searchEntry)
 
                     EntryDetailScreen(
                         modifier = Modifier.fillMaxSize(),
@@ -226,6 +228,10 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                         },
                         onKanjiClick = { character ->
                             navController.navigate(Screen.KanjiDetail.createRoute(character))
+                        },
+                        onTermClick = { term ->
+                            searchViewModel.onQueryChange(term)
+                            navController.popBackStack(Screen.Search.route, inclusive = false)
                         }
                     )
                 }

@@ -7,18 +7,18 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import dev.mariinkys.kantan.data.local.StoredExample
+import dev.mariinkys.kantan.data.local.StoredSense
 import dev.mariinkys.kantan.data.local.dao.KanjiDao
 import dev.mariinkys.kantan.data.local.dao.TermDao
 import dev.mariinkys.kantan.data.local.entity.KanjiEntity
 import dev.mariinkys.kantan.data.local.entity.TermEntity
 import dev.mariinkys.kantan.data.local.entity.TermFtsEntity
-import dev.mariinkys.kantan.domain.model.ExampleSentence
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -61,153 +61,180 @@ class DictionaryImportWorker @AssistedInject constructor(
             val rows = json.parseToJsonElement(
                 assets.open("dict/jmdict/$file").bufferedReader().readText()
             ).jsonArray
-
             val batch = rows.mapNotNull { it.jsonArray.toTermEntity() }
-
-            val insertedIds = termDao.insertAll(batch)
-
-            val ftsBatch = batch.mapIndexedNotNull { index, entity ->
-                val generatedId = insertedIds[index]
-                if (generatedId != -1L) {
-                    TermFtsEntity(
-                        termId = generatedId,
-                        expression = entity.expression,
-                        definitionsText = entity.definitionsText
-                    )
-                } else null
-            }
-            termDao.insertFts(ftsBatch)
-
+            termDao.insertAll(batch)
+            termDao.insertFts(batch.map { TermFtsEntity(it.definitionsText) })
             Log.d(tag, "Processed ${batch.size} terms from $file")
         }
     }
 
     private fun JsonArray.toTermEntity(): TermEntity? = runCatching {
-        val tags = this[2].jsonPrimitive.content
+        val expression = this[0].jsonPrimitive.content
+        val reading = this[1].jsonPrimitive.content
+        val definitionTags = this[2].jsonPrimitive.content
+        val rules = this[3].jsonPrimitive.content
+        val score = this[4].jsonPrimitive.content.toDouble().toInt()
+        val rawDefs = this[5].jsonArray
+        val sequence = this[6].jsonPrimitive.content.toDouble().toInt()
+        val termTags = this[7].jsonPrimitive.content
 
-        // Skip meta-entries; keep everything else including "exp", "v1", "adj-na", etc.
-        if (tags.contains("forms") || tags.contains("kana") || tags.contains("kanji")) {
-            return null
-        }
+        val sense = parseSense(definitionTags, rawDefs)
+        val sensesJson = json.encodeToString(listOf(sense))
+        // Flat gloss text for FTS, skip if this is a "forms" row
+        val definitionsText = if (definitionTags == "forms") ""
+        else sense.glosses.joinToString(" ")
 
-        val definitions = mutableListOf<String>()
-        val examples = mutableListOf<ExampleSentence>()
+        TermEntity(
+            expression = expression,
+            reading = reading,
+            definitionTags = definitionTags,
+            rules = rules,
+            score = score,
+            sequence = sequence,
+            termTags = termTags,
+            sensesJson = sensesJson,
+            definitionsText = definitionsText
+        )
+    }.getOrNull()
 
-        this[5].jsonArray.forEach { element ->
+    /**
+     * Parses one term_bank row's definition array into a [StoredSense].
+     */
+    private fun parseSense(definitionTags: String, rawDefs: JsonArray): StoredSense {
+        val posTags = definitionTags.split(" ").filter { it.isNotBlank() }
+        val glosses = mutableListOf<String>()
+        val examples = mutableListOf<StoredExample>()
+        val info = mutableListOf<String>()
+
+        for (element in rawDefs) {
             when (element) {
                 is JsonPrimitive -> {
-                    val content = element.content.trim()
-                    if (content.isNotBlank()) definitions.add(content)
+                    val s = element.content.trim()
+                    if (s.isNotBlank()) glosses.add(s)
                 }
 
                 is JsonObject -> {
-                    definitions.addAll(extractGlossary(element))
-                    examples.addAll(extractExamples(element))
+                    when (element["type"]?.jsonPrimitive?.content) {
+                        "structured-content" -> {
+                            val content = element["content"] ?: continue
+                            parseStructuredContent(content, glosses, examples, info)
+                        }
+
+                        "text" -> {
+                            val t = element["text"]?.jsonPrimitive?.content?.trim()
+                            if (!t.isNullOrBlank()) info.add(t)
+                        }
+                    }
                 }
 
                 else -> Unit
             }
         }
 
-        if (definitions.isEmpty()) return null
-
-        TermEntity(
-            expression = this[0].jsonPrimitive.content,
-            reading = this[1].jsonPrimitive.content,
-            definitionTags = tags,
-            rules = this[3].jsonPrimitive.content,
-            score = this[4].jsonPrimitive.int,
-            definitions = definitions,
-            sequence = this[6].jsonPrimitive.int,
-            termTags = this[7].jsonPrimitive.content,
-            definitionsText = definitions.joinToString(" "),
-            examplesJson = Json.encodeToString(examples)
+        return StoredSense(
+            posTags = posTags,
+            glosses = glosses,
+            examples = examples,
+            info = info
         )
-    }.getOrNull()
-
-    private fun extractGlossary(element: JsonElement): List<String> {
-        val results = mutableListOf<String>()
-
-        if (element is JsonObject &&
-            element["type"]?.jsonPrimitive?.content == "structured-content"
-        ) {
-            val contentEl = element["content"] ?: return emptyList()
-            // Normalize: wrap a lone object into a list so we always iterate the same way.
-            val items: List<JsonElement> = when (contentEl) {
-                is JsonArray -> contentEl.toList()
-                is JsonObject -> listOf(contentEl)
-                else -> return emptyList()
-            }
-            for (item in items) {
-                val obj = item as? JsonObject ?: continue
-                if (obj["data"]?.jsonObject?.get("content")?.jsonPrimitive?.content == "glossary") {
-                    val text = extractTextFromNode(obj["content"] ?: continue)
-                    if (text.isNotBlank()) results.add(text)
-                }
-            }
-        } else if (element is JsonPrimitive) {
-            results.add(element.content)
-        }
-
-        return results
     }
 
-    private fun extractExamples(element: JsonElement): List<ExampleSentence> {
-        val results = mutableListOf<ExampleSentence>()
+    /**
+     * Walks a structured-content node tree, routing to the right extractor
+     * based on the content marker on ul/table elements.
+     */
+    private fun parseStructuredContent(
+        node: JsonElement,
+        glosses: MutableList<String>,
+        examples: MutableList<StoredExample>,
+        info: MutableList<String>
+    ) {
+        when (node) {
+            is JsonPrimitive -> {
+                val s = node.content.trim()
+                if (s.isNotBlank()) info.add(s)
+            }
 
-        if (element !is JsonObject ||
-            element["type"]?.jsonPrimitive?.content != "structured-content"
-        ) return results
+            is JsonArray -> node.forEach { parseStructuredContent(it, glosses, examples, info) }
+            is JsonObject -> {
+                val dataContent = node["data"]?.jsonObject?.get("content")?.jsonPrimitive?.content
+                val content = node["content"]
 
-        val contentEl = element["content"] ?: return results
-        val items: List<JsonElement> = when (contentEl) {
-            is JsonArray -> contentEl.toList()
-            is JsonObject -> listOf(contentEl)
-            else -> return results
+                when (dataContent) {
+                    "glossary" -> extractGlossary(content, glosses)
+                    "examples" -> extractExamples(content, examples)
+                    "references" -> {
+                        val refText = flatText(node).trim()
+                        if (refText.isNotBlank()) info.add(refText)
+                    }
+
+                    "formsTable" -> { /* we skip them, forms rows handled separately */
+                    }
+
+                    else -> if (content != null) {
+                        parseStructuredContent(content, glosses, examples, info)
+                    }
+                }
+            }
         }
+    }
+
+    /** Extracts "li" text nodes from a glossary ul as individual glosses. */
+    private fun extractGlossary(content: JsonElement?, glosses: MutableList<String>) {
+        if (content == null) return
+        // content can be a single node OR an array of nodes we have to normalize to a list
+        val items: List<JsonElement> = when (content) {
+            is JsonArray -> content.toList()
+            else -> listOf(content) // single li object
+        }
+        for (item in items) {
+            val text = flatText(item).trim()
+            if (text.isNotBlank()) glosses.add(text)
+        }
+    }
+
+    /**
+     * Extracts example pairs from an examples ul.
+     * Structure: first li is Japanese, following li(s) with lang="en" are translations.
+     * A single ul can contain multiple (jp, en) pairs interleaved.
+     */
+    private fun extractExamples(content: JsonElement?, examples: MutableList<StoredExample>) {
+        val items: List<JsonElement> = when (content) {
+            is JsonArray -> content.toList()
+            is JsonObject -> listOf(content)
+            else -> return
+        }
+        var pendingJp: String? = null
 
         for (item in items) {
-            val obj = item as? JsonObject ?: continue
-            if (obj["data"]?.jsonObject?.get("content")?.jsonPrimitive?.content != "examples") continue
-
-            val liItems = (obj["content"] as? JsonArray) ?: continue
-            // the pattern is: Japanese li (no lang or lang="ja") followed by English li (lang="en")
-            var japanese = ""
-            var english = ""
-
-            for (li in liItems) {
-                val liObj = li as? JsonObject ?: continue
-                val lang = liObj["lang"]?.jsonPrimitive?.content
-                val text = extractTextFromNode(liObj["content"] ?: continue).trim()
-
-                when (lang) {
-                    null, "ja" -> japanese = text
-                    "en" -> english = text
+            if (item !is JsonObject) continue
+            val lang = item["lang"]?.jsonPrimitive?.content
+            val text = flatText(item).trim()
+            if (text.isBlank()) continue
+            when {
+                lang == "en" && pendingJp != null -> {
+                    examples.add(StoredExample(japanese = pendingJp, english = text))
+                    pendingJp = null
                 }
-            }
-            if (japanese.isNotBlank()) {
-                results.add(ExampleSentence(japanese = japanese, english = english))
+
+                lang != "en" -> pendingJp = text
+                else -> pendingJp = text
             }
         }
-
-        return results
     }
 
-    private fun extractTextFromNode(node: JsonElement): String = when (node) {
+    /** Collects all text content from a node as a flat string. */
+    private fun flatText(node: JsonElement): String = when (node) {
         is JsonPrimitive -> node.content
-        is JsonArray -> node.joinToString(" ") { extractTextFromNode(it) }
+        is JsonArray -> node.joinToString("") { flatText(it) }
         is JsonObject -> {
-            val nodeTag = node["tag"]?.jsonPrimitive?.content
+            val text = node["text"]?.jsonPrimitive?.content
             val content = node["content"]
-            if (node["data"] != null && content == null) return ""
-            val inner = if (content != null) extractTextFromNode(content) else ""
-            when (nodeTag) {
-                "tr" -> (content as? JsonArray)
-                    ?.joinToString(" | ") { extractTextFromNode(it).trim() } ?: inner
 
-                "table" -> if (content != null) extractTextFromNode(content).trim() else inner
-                "div", "p", "li" -> "\n$inner"
-                else -> inner
+            when {
+                text != null -> text
+                content != null -> flatText(content)
+                else -> ""
             }
         }
     }

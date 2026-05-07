@@ -55,7 +55,7 @@ import dev.mariinkys.kantan.ui.search.handwriting.HandwritingBottomSheet
 @Composable
 fun SearchScreen(
     onMenuClick: () -> Unit,
-    onEntryClick: (expression: String, reading: String) -> Unit,
+    onEntryClick: (sequence: Int) -> Unit,
     modifier: Modifier,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -181,16 +181,16 @@ private fun SearchBar(
 @Composable
 private fun ResultList(
     entries: List<DictionaryEntry>,
-    onEntryClick: (String, String) -> Unit
+    onEntryClick: (Int) -> Unit
 ) {
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         items(
             items = entries,
-            key = { "${it.expression}|${it.reading}" }
+            key = { "${it.id}" }
         ) { entry ->
             EntryRow(
                 entry = entry,
-                onClick = { onEntryClick(entry.expression, entry.reading) }
+                onClick = { onEntryClick(entry.id) }
             )
             HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
         }
@@ -219,7 +219,7 @@ private fun EntryRow(entry: DictionaryEntry, onClick: () -> Unit) {
         }
         Spacer(Modifier.width(12.dp))
         Text(
-            text = entry.longDefinition,
+            text = entry.shortDefinition,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2,
@@ -232,7 +232,7 @@ private fun EntryRow(entry: DictionaryEntry, onClick: () -> Unit) {
 @Composable
 private fun EmptyPrompt(
     randomState: RandomEntryDetailState,
-    onEntryClick: (String, String) -> Unit
+    onEntryClick: (Int) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -266,8 +266,7 @@ private fun EmptyPrompt(
                     entry = randomState.entry,
                     onClick = {
                         onEntryClick(
-                            randomState.entry.expression,
-                            randomState.entry.reading
+                            randomState.entry.id
                         )
                     }
                 )
@@ -341,7 +340,7 @@ private fun DiscoveryCard(
                 style = MaterialTheme.typography.headlineMedium
             )
             Text(
-                entry.longDefinition,
+                entry.shortDefinition,
                 maxLines = 2,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

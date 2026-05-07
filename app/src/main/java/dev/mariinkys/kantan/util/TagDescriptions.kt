@@ -24,6 +24,7 @@ private val TAG_DESCRIPTIONS: Map<String, String> = mapOf(
     "exp" to "Expression",
     "int" to "Interjection",
     "n" to "Noun",
+    "1" to "Noun",
     "n-adv" to "Adverbial noun",
     "n-pr" to "Proper noun",
     "n-pref" to "Noun prefix",
@@ -35,8 +36,14 @@ private val TAG_DESCRIPTIONS: Map<String, String> = mapOf(
     "prt" to "Particle",
     "suf" to "Suffix",
     "unc" to "Unclassified",
+
+    // Ichidan verbs
     "v1" to "Ichidan verb",
     "v1-s" to "Ichidan verb (kureru)",
+    "vz" to "Ichidan verb (-zuru)",
+
+    // Godan verbs
+    "v5" to "Godan verb",
     "v5aru" to "Godan verb (-aru)",
     "v5b" to "Godan verb (ぶ)",
     "v5g" to "Godan verb (ぐ)",
@@ -51,6 +58,43 @@ private val TAG_DESCRIPTIONS: Map<String, String> = mapOf(
     "v5u" to "Godan verb (う)",
     "v5u-s" to "Godan verb (う, special)",
     "v5uru" to "Godan verb (uru)",
+
+    // Nidan verbs (archaic)
+    "v2a-s" to "Nidan verb, 'u' ending (archaic)",
+    "v2b-k" to "Nidan verb (upper), 'bu' ending (archaic)",
+    "v2b-s" to "Nidan verb (lower), 'bu' ending (archaic)",
+    "v2d-s" to "Nidan verb (lower), 'dzu' ending (archaic)",
+    "v2g-k" to "Nidan verb (upper), 'gu' ending (archaic)",
+    "v2g-s" to "Nidan verb (lower), 'gu' ending (archaic)",
+    "v2h-k" to "Nidan verb (upper), 'hu/fu' ending (archaic)",
+    "v2h-s" to "Nidan verb (lower), 'hu/fu' ending (archaic)",
+    "v2k-k" to "Nidan verb (upper), 'ku' ending (archaic)",
+    "v2k-s" to "Nidan verb (lower), 'ku' ending (archaic)",
+    "v2m-k" to "Nidan verb (upper), 'mu' ending (archaic)",
+    "v2m-s" to "Nidan verb (lower), 'mu' ending (archaic)",
+    "v2n-s" to "Nidan verb (lower), 'nu' ending (archaic)",
+    "v2r-k" to "Nidan verb (upper), 'ru' ending (archaic)",
+    "v2r-s" to "Nidan verb (lower), 'ru' ending (archaic)",
+    "v2s-s" to "Nidan verb (lower), 'su' ending (archaic)",
+    "v2t-k" to "Nidan verb (upper), 'tsu' ending (archaic)",
+    "v2t-s" to "Nidan verb (lower), 'tsu' ending (archaic)",
+    "v2w-s" to "Nidan verb (lower), 'u' ending (archaic)",
+    "v2y-k" to "Nidan verb (upper), 'yu' ending (archaic)",
+    "v2y-s" to "Nidan verb (lower), 'yu' ending (archaic)",
+    "v2z-s" to "Nidan verb (lower), 'zu' ending (archaic)",
+
+    // Yodan verbs (archaic)
+    "v4b" to "Yodan verb, 'bu' ending (archaic)",
+    "v4g" to "Yodan verb, 'gu' ending (archaic)",
+    "v4h" to "Yodan verb, 'hu/fu' ending (archaic)",
+    "v4k" to "Yodan verb, 'ku' ending (archaic)",
+    "v4m" to "Yodan verb, 'mu' ending (archaic)",
+    "v4n" to "Yodan verb, 'nu' ending (archaic)",
+    "v4r" to "Yodan verb, 'ru' ending (archaic)",
+    "v4s" to "Yodan verb, 'su' ending (archaic)",
+    "v4t" to "Yodan verb, 'tsu' ending (archaic)",
+
+    // Other verb types
     "vi" to "Intransitive",
     "vk" to "Kuru verb",
     "vn" to "Irregular nu verb",
@@ -60,7 +104,7 @@ private val TAG_DESCRIPTIONS: Map<String, String> = mapOf(
     "vs-i" to "Suru verb (included)",
     "vs-s" to "Suru verb (special)",
     "vt" to "Transitive",
-    "vz" to "Ichidan verb (-zuru)",
+
     // Miscellaneous
     "abbr" to "Abbreviation",
     "arch" to "Archaic",
@@ -90,13 +134,85 @@ private val TAG_DESCRIPTIONS: Map<String, String> = mapOf(
     "sl" to "Slang",
     "uk" to "Usually kana",
     "vulg" to "Vulgar",
+    "wasei" to "Wasei-eigo",
     "yoji" to "Yojijukugo",
     "X" to "Adult content",
+
+    // Proper noun subtypes
+    "char" to "Character",
+    "company" to "Company name",
+    "creat" to "Creature",
+    "deity" to "Deity",
+    "doc" to "Document",
+    "ev" to "Event",
+    "fict" to "Fictional",
+    "group" to "Group",
+    "leg" to "Legendary",
+    "myth" to "Mythology",
+    "obj" to "Object",
+    "org" to "Organization",
+    "oth" to "Other",
+    "person" to "Person",
+    "place" to "Place",
+    "product" to "Product",
+    "relig" to "Religion",
+    "serv" to "Service",
+    "station" to "Station",
+    "work" to "Work of art",
+
+    // Field / domain tags
+    "anat" to "Anatomy",
+    "archit" to "Architecture",
+    "astron" to "Astronomy",
+    "baseb" to "Baseball",
+    "biol" to "Biology",
+    "bot" to "Botany",
+    "Buddh" to "Buddhism",
+    "bus" to "Business",
+    "chem" to "Chemistry",
+    "comp" to "Computing",
+    "econ" to "Economics",
+    "elec" to "Electronics",
+    "engr" to "Engineering",
+    "finc" to "Finance",
+    "food" to "Food",
+    "geol" to "Geology",
+    "geom" to "Geometry",
+    "go" to "Go (game)",
+    "golf" to "Golf",
+    "gramm" to "Grammar",
+    "hanaf" to "Hanafuda",
+    "law" to "Law",
+    "ling" to "Linguistics",
+    "logic" to "Logic",
+    "MA" to "Martial arts",
+    "mahj" to "Mahjong",
+    "math" to "Mathematics",
+    "med" to "Medicine",
+    "mil" to "Military",
+    "music" to "Music",
+    "noh" to "Noh theatre",
+    "physics" to "Physics",
+    "photo" to "Photography",
+    "print" to "Printing",
+    "psych" to "Psychology",
+    "Shinto" to "Shinto",
+    "shogi" to "Shogi",
+    "sports" to "Sports",
+    "sumo" to "Sumo",
+    "telec" to "Telecommunications",
+    "tradem" to "Trademark",
+    "vidg" to "Video games",
+    "zool" to "Zoology",
+
     // Frequency
     "ichi" to "Common (Ichimango)",
     "spec" to "Common (JMdict)",
+    "spec1" to "Common (JMdict spec1)",
+    "spec2" to "Common (JMdict spec2)",
     "gai" to "Common loanword",
     "⭐" to "Common word",
+
     // Reading / kanji info
     "gikun" to "Gikun reading",
     "ik" to "Irregular kana",
@@ -109,11 +225,17 @@ private val TAG_DESCRIPTIONS: Map<String, String> = mapOf(
     "rK" to "Rare kanji",
 )
 
-/** Resolves a raw tag code to a display label. */
+/** Resolves a raw tag code to a human-readable display label. */
 fun resolveTag(raw: String): String {
     TAG_DESCRIPTIONS[raw]?.let { return it }
-    // news1k … news24k  →  "Top 1k words", "Top 2k words", …
+
+    // news1k … news24k: "Top 1k words", "Top 2k words", …
     val newsMatch = Regex("""^news(\d+)k$""").find(raw)
     if (newsMatch != null) return "Top ${newsMatch.groupValues[1]}k words"
-    return raw // fall back to the raw code if unknown
+
+    // nf01 … nf48: Mainichi newspaper frequency bands (each band ≈ 500 words)
+    val nfMatch = Regex("""^nf(\d+)$""").find(raw)
+    if (nfMatch != null) return "Freq. rank ${nfMatch.groupValues[1].toInt() * 500}"
+
+    return raw // fall back to the raw code if still unknown
 }

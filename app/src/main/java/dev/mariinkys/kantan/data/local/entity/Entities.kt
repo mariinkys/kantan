@@ -8,8 +8,6 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import dev.mariinkys.kantan.data.local.Converters
 
-// JMdict term
-
 @Entity(
     tableName = "terms",
     indices = [Index("expression"), Index("reading")]
@@ -22,29 +20,20 @@ data class TermEntity(
     val definitionTags: String,
     val rules: String,
     val score: Int,
-    val definitions: List<String>,
     val sequence: Int,
     val termTags: String,
-    val examplesJson: String = "[]",
-    // Flat text used by the FTS table — all definition strings joined with spaces.
+    // Structured senses as JSON List<StoredSense>
+    @ColumnInfo(name = "senses_json") val sensesJson: String = "[]",
+    // Flat gloss text for FTS only we don't show this in the UI
     @ColumnInfo(name = "definitions_text") val definitionsText: String = ""
 )
 
-// FTS4 virtual table
-//
-// Intentionally NOT using contentEntity, that links via rowid which breaks when
-// insertAll() silently ignores duplicate rows (rowids then diverge).
-// Instead, we store `expression` and join back to `terms` on that column.
-
+// FTS virtual table — indexes definitionsText for English keyword search
 @Entity(tableName = "terms_fts")
 @Fts4
 data class TermFtsEntity(
-    val termId: Long,
-    val expression: String,
     @ColumnInfo(name = "definitions_text") val definitionsText: String
 )
-
-// KANJIDIC kanji
 
 @Entity(
     tableName = "kanji",
