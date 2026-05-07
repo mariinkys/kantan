@@ -24,10 +24,11 @@ class DictionaryRepositoryImpl @Inject constructor(
         val q = query.trim()
         if (q.isBlank()) return flowOf(emptyList())
         return flow {
+            val kana = if (!RomajiConverter.isJapanese(q)) RomajiConverter.convert(q) else q
+
             val rows = if (RomajiConverter.isJapanese(q)) {
                 termDao.searchByPrefix(q)
             } else {
-                val kana = RomajiConverter.convert(q)
                 val prefixRows = if (kana != q && kana.isNotBlank())
                     termDao.searchByPrefix(kana) else emptyList()
                 val ftsQuery = buildFtsQuery(q)
@@ -37,7 +38,8 @@ class DictionaryRepositoryImpl @Inject constructor(
                 val seen = mutableSetOf<Long>()
                 (prefixRows + ftsRows).filter { seen.add(it.id) }
             }
-            emit(rows.groupAndMap())
+
+            emit(rows.groupAndMap().sortedByDescending { rankScore(it, q, kana) })
         }.flowOn(Dispatchers.IO)
     }
 
@@ -91,4 +93,46 @@ class DictionaryRepositoryImpl @Inject constructor(
 internal fun Char.isKanji(): Boolean {
     val cp = code
     return cp in 0x4E00..0x9FFF || cp in 0x3400..0x4DBF || cp in 0xF900..0xFAFF
+}
+
+private fun rankScore(entry: DictionaryEntry, query: String, kanaQuery: String = ""): Int {
+    val q = query.lowercase()
+    var boost = 0
+
+    // Reading match boost important for romaji/kana searches.
+    // Exact reading match (おんな == おんな) must beat prefix match (おんな < おんながた).
+    if (kanaQuery.isNotBlank()) {
+        // entry.reading may be "おんな、 おにょ" so check each reading individually
+        val readings = entry.reading.split("、").map { it.trim() }
+        when {
+            readings.any { it == kanaQuery } -> boost += 200_000
+            readings.any { it.startsWith(kanaQuery) } -> boost += 30_000
+        }
+    }
+
+    // Gloss match boost (for English searches)
+    for ((senseIndex, sense) in entry.senses.withIndex()) {
+        for ((glossIndex, gloss) in sense.glosses.withIndex()) {
+            val g = gloss.lowercase()
+            val isExact = g == q
+            val isPrefix = g.startsWith(q)
+            val contains = g.contains(q)
+            if (!isExact && !isPrefix && !contains) continue
+
+            val positionWeight = 1.0 / ((senseIndex + 1) * (glossIndex + 1))
+            boost += when {
+                isExact -> (100_000 * positionWeight).toInt()
+                isPrefix -> (30_000 * positionWeight).toInt()
+                else -> (5_000 * positionWeight).toInt()
+            }
+        }
+    }
+
+    // JMDict frequency as a baseline, normalized so it doesn't drown out
+    val frequencyWeight = entry.score.coerceAtLeast(0) / 2
+
+    // Shorter expressions are more fundamental for a given meaning.
+    val lengthPenalty = entry.expression.length * 15_000
+
+    return boost + frequencyWeight - lengthPenalty
 }

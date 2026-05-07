@@ -8,7 +8,8 @@ data class DictionaryEntry(
     val variants: List<String> = emptyList(),
     val senses: List<Sense>,
     val rules: String,
-    val tags: String
+    val tags: String,
+    val score: Int = 0
 ) {
     /** First gloss of first sense — for list/favorites display. */
     val shortDefinition: String

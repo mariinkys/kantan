@@ -53,7 +53,8 @@ fun List<TermEntity>.groupAndMap(): List<DictionaryEntry> {
                 variants = allForms,
                 senses = senses,
                 rules = rules,
-                tags = tags
+                tags = tags,
+                score = rows.maxOf { it.score }
             )
         }
         .filter { it.senses.isNotEmpty() }
