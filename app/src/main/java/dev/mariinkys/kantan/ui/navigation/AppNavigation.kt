@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -44,6 +45,8 @@ import androidx.navigation.navArgument
 import dev.mariinkys.kantan.R
 import dev.mariinkys.kantan.ui.AboutScreen
 import dev.mariinkys.kantan.ui.KanaTablesScreen
+import dev.mariinkys.kantan.ui.customLists.CustomListsScreen
+import dev.mariinkys.kantan.ui.customLists.details.ListEntriesScreen
 import dev.mariinkys.kantan.ui.entry.EntryDetailScreen
 import dev.mariinkys.kantan.ui.favorites.FavoritesScreen
 import dev.mariinkys.kantan.ui.kanji.KanjiDetailScreen
@@ -59,9 +62,17 @@ sealed class Screen(val route: String) {
     data object Search : Screen("search")
 
     data object About : Screen("about")
+
     data object KanaTables : Screen("kana_tables")
 
     data object Favorites : Screen("favorites")
+
+    data object CustomLists : Screen("custom_lists")
+
+    data object ListEntries : Screen("custom_lists/{listId}/{listName}") {
+        fun createRoute(listId: Int, listName: String) =
+            "custom_lists/$listId/${listName.enc()}"
+    }
 
     data object EntryDetail : Screen("entry/{sequence}") {
         fun createRoute(sequence: Int) = "entry/$sequence"
@@ -141,6 +152,22 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                         scope.launch {
                             drawerState.close()
                         }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+                    label = { Text("My Lists") },
+                    selected = currentRoute == Screen.CustomLists.route,
+                    onClick = {
+                        navController.navigate(Screen.CustomLists.route) {
+                            popUpTo(Screen.Search.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+
+                        scope.launch { drawerState.close() }
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
@@ -234,6 +261,48 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                                     sequence
                                 )
                             )
+                        }
+                    )
+                }
+
+                composable(Screen.CustomLists.route) {
+                    CustomListsScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        snackbarHostState = snackbarHostState,
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        onListClick = { listId, listName ->
+                            navController.navigate(Screen.ListEntries.createRoute(listId, listName))
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.ListEntries.route,
+                    arguments = listOf(
+                        navArgument("listId") { type = NavType.IntType },
+                        navArgument("listName") { type = NavType.StringType }
+                    )
+                ) { backStack ->
+                    val listName = backStack.arguments?.getString("listName")?.dec() ?: ""
+                    backStack.arguments?.putString("listName", listName)
+
+                    ListEntriesScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        snackbarHostState = snackbarHostState,
+                        listName = listName,
+                        onEntryClick = { sequence ->
+                            if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                navController.navigate(Screen.EntryDetail.createRoute(sequence))
+                            }
+                        },
+                        onBack = {
+                            if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                navController.popBackStack()
+                            }
                         }
                     )
                 }
