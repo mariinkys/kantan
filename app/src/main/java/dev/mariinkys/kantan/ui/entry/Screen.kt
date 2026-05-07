@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
@@ -84,69 +85,71 @@ fun EntryDetailScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = {
-                    if (state is EntryDetailState.Success) {
-                        val s = state as EntryDetailState.Success
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    s.entry.expression,
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-
-                                val altForms = s.entry.variants
-                                    .filter { it != s.entry.expression }
-                                    .filter { v -> v.any { it.isKanji() } }
-                                if (altForms.isNotEmpty()) {
+            SelectionContainer {
+                TopAppBar(
+                    title = {
+                        if (state is EntryDetailState.Success) {
+                            val s = state as EntryDetailState.Success
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     Text(
-                                        text = "· ${altForms.joinToString("、")}",
+                                        s.entry.expression,
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+
+                                    val altForms = s.entry.variants
+                                        .filter { it != s.entry.expression }
+                                        .filter { v -> v.any { it.isKanji() } }
+                                    if (altForms.isNotEmpty()) {
+                                        Text(
+                                            text = "· ${altForms.joinToString("、")}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                if (s.entry.reading.isNotBlank() && s.entry.reading != s.entry.expression) {
+                                    Text(
+                                        s.entry.reading,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
-
-                            if (s.entry.reading.isNotBlank() && s.entry.reading != s.entry.expression) {
-                                Text(
-                                    s.entry.reading,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        }
+                    },
+                    actions = {
+                        // only show the favorite button once the entry has loaded
+                        if (state is EntryDetailState.Success) {
+                            IconButton(onClick = viewModel::toggleFavorite) {
+                                Icon(
+                                    imageVector = if (isFavorite)
+                                        Icons.Filled.Favorite
+                                    else
+                                        Icons.Filled.FavoriteBorder,
+                                    contentDescription = if (isFavorite)
+                                        "Remove from favorites"
+                                    else
+                                        "Add to favorites",
+                                    tint = if (isFavorite)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                },
-                actions = {
-                    // only show the favorite button once the entry has loaded
-                    if (state is EntryDetailState.Success) {
-                        IconButton(onClick = viewModel::toggleFavorite) {
-                            Icon(
-                                imageVector = if (isFavorite)
-                                    Icons.Filled.Favorite
-                                else
-                                    Icons.Filled.FavoriteBorder,
-                                contentDescription = if (isFavorite)
-                                    "Remove from favorites"
-                                else
-                                    "Add to favorites",
-                                tint = if (isFavorite)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            )
+                )
+            }
         }
     ) { innerPadding ->
         when (val s = state) {
@@ -190,7 +193,7 @@ private fun EntryDetailContent(
         if (conjugationTable != null) add("Inflections")
         if (kanji.isNotEmpty()) add("Kanji")
     }
-    
+
     val pagerState = rememberPagerState { tabs.size }
     val scope = rememberCoroutineScope()
 
@@ -349,25 +352,32 @@ private fun SenseSection(index: Int, sense: Sense, isLast: Boolean, onTermClick:
         }
 
         // Glosses
+
         sense.glosses.forEachIndexed { i, gloss ->
-            Text(
-                text = if (sense.glosses.size == 1) gloss
-                else "${i + 1}. $gloss",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(start = 4.dp)
-            )
+            SelectionContainer {
+                Text(
+                    text = if (sense.glosses.size == 1) gloss
+                    else "${i + 1}. $gloss",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
         }
 
         // Info notes (See also, Usually written as, etc.)
         sense.info.forEach { note ->
-            InfoNote(note = note, onTermClick = onTermClick)
+            SelectionContainer {
+                InfoNote(note = note, onTermClick = onTermClick)
+            }
         }
 
         // Example sentences
         if (sense.examples.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
             sense.examples.forEach { example ->
-                ExampleCard(example)
+                SelectionContainer {
+                    ExampleCard(example)
+                }
             }
         }
 
@@ -474,63 +484,69 @@ private fun ExampleCard(example: Example) {
 
 @Composable
 private fun ConjugationsTab(table: ConjugationTable) {
-    LazyColumn(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    "Form", Modifier.weight(2f),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "Affirmative", Modifier.weight(2f),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "Negative", Modifier.weight(2f),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            HorizontalDivider()
-        }
+    SelectionContainer {
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
 
-        itemsIndexed(table.rows) { index, row ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    row.label, Modifier.weight(2f),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    row.affirmative, Modifier.weight(2f),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    row.negative, Modifier.weight(2f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error
-                )
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "Form", Modifier.weight(2f),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Affirmative", Modifier.weight(2f),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Negative", Modifier.weight(2f),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                HorizontalDivider()
             }
-            if (index < table.rows.lastIndex) HorizontalDivider(thickness = 0.5.dp)
+
+
+            itemsIndexed(table.rows) { index, row ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    Text(
+                        row.label, Modifier.weight(2f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        row.affirmative, Modifier.weight(2f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        row.negative, Modifier.weight(2f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+
+                }
+                if (index < table.rows.lastIndex) HorizontalDivider(thickness = 0.5.dp)
+            }
         }
     }
 }

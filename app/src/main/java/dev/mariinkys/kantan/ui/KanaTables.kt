@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -161,83 +162,85 @@ private fun KanaTable(rows: List<KanaRow>) {
     val cellHeight = 52.dp
     val romajiWidth = 36.dp
 
-    LazyColumn(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        item {
-            Row(Modifier.fillMaxWidth()) {
-                Box(
-                    Modifier
-                        .size(width = romajiWidth, height = cellHeight)
-                        .background(headerBg)
-                        .border(0.5.dp, borderColor)
-                )
-                VOWEL_HEADERS.forEach { vowel ->
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .height(cellHeight)
-                            .background(headerBg)
-                            .border(0.5.dp, borderColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            vowel,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-        }
-
-        rows.forEachIndexed { index, kanaRow ->
-            item(key = "${kanaRow.group}_$index") {
-                if (kanaRow.group in SECTION_BREAKS) {
-                    HorizontalDivider(
-                        thickness = 2.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                }
-
-                val rowBg = if (index % 2 == 0) altBg else sectionBg
-
+    SelectionContainer {
+        LazyColumn(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            item {
                 Row(Modifier.fillMaxWidth()) {
                     Box(
                         Modifier
                             .size(width = romajiWidth, height = cellHeight)
                             .background(headerBg)
-                            .border(0.5.dp, borderColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            kanaRow.group,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-
-                    kanaRow.chars.forEach { kana ->
+                            .border(0.5.dp, borderColor)
+                    )
+                    VOWEL_HEADERS.forEach { vowel ->
                         Box(
                             Modifier
                                 .weight(1f)
                                 .height(cellHeight)
-                                .background(rowBg)
+                                .background(headerBg)
                                 .border(0.5.dp, borderColor),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (kana != null) {
-                                Text(
-                                    kana,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Normal,
-                                    textAlign = TextAlign.Center
-                                )
+                            Text(
+                                vowel,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+
+            rows.forEachIndexed { index, kanaRow ->
+                item(key = "${kanaRow.group}_$index") {
+                    if (kanaRow.group in SECTION_BREAKS) {
+                        HorizontalDivider(
+                            thickness = 2.dp,
+                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+
+                    val rowBg = if (index % 2 == 0) altBg else sectionBg
+
+                    Row(Modifier.fillMaxWidth()) {
+                        Box(
+                            Modifier
+                                .size(width = romajiWidth, height = cellHeight)
+                                .background(headerBg)
+                                .border(0.5.dp, borderColor),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                kanaRow.group,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
+                        kanaRow.chars.forEach { kana ->
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .height(cellHeight)
+                                    .background(rowBg)
+                                    .border(0.5.dp, borderColor),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (kana != null) {
+                                    Text(
+                                        kana,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Normal,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     }
