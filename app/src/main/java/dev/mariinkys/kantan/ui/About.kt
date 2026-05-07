@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.HorizontalDivider
@@ -84,100 +85,102 @@ fun AboutScreen(
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onMenuClick) {
-                Icon(Icons.Default.Menu, contentDescription = "Open Menu")
-            }
-            Text("About", style = MaterialTheme.typography.titleLarge)
-        }
-
-        HorizontalDivider()
-
-        Icon(
-            painter = painterResource(id = R.mipmap.ic_launcher_foreground),
-            contentDescription = "App Logo",
-            modifier = Modifier.size(124.dp),
-            tint = Color.Unspecified
-        )
-        Text("Kantan Japanese Dictionary", style = MaterialTheme.typography.headlineSmall)
-
-        TextButton(onClick = {
-            uriHandler.openUri("https://github.com/mariinkys/Kantan/releases")
-        }) {
-            Text(
-                text = "Version $versionName",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
+    SelectionContainer {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+            modifier = modifier
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            LinkedText(
-                fullText = "The dictionary words and kanji come from the JMDict and KANJIDIC files owned by the Electronic Dictionary Research and Development Group (www.edrdg.org), and are used in conformance with the Group's license.",
-                linkText = "www.edrdg.org",
-                url = "http://www.edrdg.org"
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "The example sentences come from the projects Tatoeba and Tanaka Corpus.",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.onSurface
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onMenuClick) {
+                    Icon(Icons.Default.Menu, contentDescription = "Open Menu")
+                }
+                Text("About", style = MaterialTheme.typography.titleLarge)
+            }
+
+            HorizontalDivider()
+
+            Icon(
+                painter = painterResource(id = R.mipmap.ic_launcher_foreground),
+                contentDescription = "App Logo",
+                modifier = Modifier.size(124.dp),
+                tint = Color.Unspecified
             )
+            Text("Kantan Japanese Dictionary", style = MaterialTheme.typography.headlineSmall)
+
+            TextButton(onClick = {
+                uriHandler.openUri("https://github.com/mariinkys/Kantan/releases")
+            }) {
+                Text(
+                    text = "Version $versionName",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            LinkedText(
-                fullText = "The Kanji strokes information are from KanjiVG provided by Ulrich Apel at kanjivg.tagaini.net",
-                linkText = "kanjivg.tagaini.net",
-                url = "http://kanjivg.tagaini.net"
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                LinkedText(
+                    fullText = "The dictionary words and kanji come from the JMDict and KANJIDIC files owned by the Electronic Dictionary Research and Development Group (www.edrdg.org), and are used in conformance with the Group's license.",
+                    linkText = "www.edrdg.org",
+                    url = "http://www.edrdg.org"
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "The example sentences come from the projects Tatoeba and Tanaka Corpus.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LinkedText(
+                    fullText = "The Kanji strokes information are from KanjiVG provided by Ulrich Apel at kanjivg.tagaini.net",
+                    linkText = "kanjivg.tagaini.net",
+                    url = "http://kanjivg.tagaini.net"
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LinkedText(
+                    fullText = "Kantan specifically uses the JMDict and KANJIDIC files provided by Yomitan (https://github.com/yomidevs/jmdict-yomitan)",
+                    linkText = "https://github.com/yomidevs/jmdict-yomitan",
+                    url = "https://github.com/yomidevs/jmdict-yomitan"
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
+            TextButton(onClick = {
+                uriHandler.openUri("https://github.com/mariinkys")
+            }) {
+                Text(
+                    text = "mariinkys",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
 
-            LinkedText(
-                fullText = "Kantan specifically uses the JMDict and KANJIDIC files provided by Yomitan (https://github.com/yomidevs/jmdict-yomitan)",
-                linkText = "https://github.com/yomidevs/jmdict-yomitan",
-                url = "https://github.com/yomidevs/jmdict-yomitan"
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        TextButton(onClick = {
-            uriHandler.openUri("https://github.com/mariinkys")
-        }) {
-            Text(
-                text = "mariinkys",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        TextButton(onClick = {
-            uriHandler.openUri("https://github.com/mariinkys/kantan/issues")
-        }) {
-            Text(
-                text = "Issues / Suggestions",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
+            TextButton(onClick = {
+                uriHandler.openUri("https://github.com/mariinkys/kantan/issues")
+            }) {
+                Text(
+                    text = "Issues / Suggestions",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

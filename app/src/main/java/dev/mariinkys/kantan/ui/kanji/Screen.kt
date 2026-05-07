@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
@@ -124,10 +125,12 @@ private fun KanjiDetailContent(
         item {
             InfoCard("Meanings") {
                 kanji.meanings.forEachIndexed { i, m ->
-                    Text(
-                        "${i + 1}. $m", style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    )
+                    SelectionContainer {
+                        Text(
+                            "${i + 1}. $m", style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
                 }
             }
         }
@@ -339,7 +342,9 @@ private fun ReadingRow(label: String, readings: List<String>) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(120.dp)
         )
-        Text(readings.joinToString("、"), style = MaterialTheme.typography.bodyMedium)
+        SelectionContainer {
+            Text(readings.joinToString("、"), style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 
@@ -350,6 +355,8 @@ private fun StatRow(label: String, value: String) {
             label, style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        SelectionContainer {
+            Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        }
     }
 }
