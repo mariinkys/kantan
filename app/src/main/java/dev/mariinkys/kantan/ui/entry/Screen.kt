@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,12 +39,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.mariinkys.kantan.data.repository.isKanji
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.domain.model.Example
 import dev.mariinkys.kantan.domain.model.KanjiEntry
@@ -51,11 +60,20 @@ import dev.mariinkys.kantan.domain.model.Sense
 import dev.mariinkys.kantan.util.resolveTag
 import kotlinx.coroutines.launch
 
+
+// Annotation tag used in AnnotatedString to mark tappable "see also" terms
+private const val SEE_ALSO_TAG = "SEE_ALSO"
+
+// Matches "see: <term> optional gloss", the Japanese term is group 1, trailing gloss is group 2
+private val SEE_ALSO_REGEX = Regex("""^see:\s+(\S+)\s*(.*)$""", RegexOption.IGNORE_CASE)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EntryDetailScreen(
     onBack: () -> Unit,
     onKanjiClick: (character: String) -> Unit,
+    // Called when the user taps a "See also" term or any cross-reference link.
+    onTermClick: (term: String) -> Unit,
     modifier: Modifier,
     viewModel: EntryDetailViewModel = hiltViewModel()
 ) {
@@ -70,8 +88,28 @@ fun EntryDetailScreen(
                     if (state is EntryDetailState.Success) {
                         val s = state as EntryDetailState.Success
                         Column {
-                            Text(s.entry.expression, style = MaterialTheme.typography.titleLarge)
-                            if (s.entry.reading != s.entry.expression) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    s.entry.expression,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+
+                                val altForms = s.entry.variants
+                                    .filter { it != s.entry.expression }
+                                    .filter { v -> v.any { it.isKanji() } }
+                                if (altForms.isNotEmpty()) {
+                                    Text(
+                                        text = "· ${altForms.joinToString("、")}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            if (s.entry.reading.isNotBlank() && s.entry.reading != s.entry.expression) {
                                 Text(
                                     s.entry.reading,
                                     style = MaterialTheme.typography.bodyMedium,
@@ -129,6 +167,7 @@ fun EntryDetailScreen(
                 entry = s.entry,
                 kanji = s.kanji,
                 onKanjiClick = onKanjiClick,
+                onTermClick = onTermClick,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -140,6 +179,7 @@ private fun EntryDetailContent(
     entry: DictionaryEntry,
     kanji: List<KanjiEntry>,
     onKanjiClick: (String) -> Unit,
+    onTermClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val tabs = buildList {
@@ -165,7 +205,7 @@ private fun EntryDetailContent(
             verticalAlignment = Alignment.Top
         ) { page ->
             when (tabs[page]) {
-                "Definitions" -> DefinitionsTab(entry)
+                "Definitions" -> DefinitionsTab(entry, onTermClick)
                 "Kanji" -> KanjiTab(kanji, onKanjiClick)
             }
         }
@@ -173,7 +213,7 @@ private fun EntryDetailContent(
 }
 
 @Composable
-private fun DefinitionsTab(entry: DictionaryEntry) {
+private fun DefinitionsTab(entry: DictionaryEntry, onTermClick: (String) -> Unit) {
     LazyColumn(
         contentPadding = PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
@@ -192,11 +232,12 @@ private fun DefinitionsTab(entry: DictionaryEntry) {
 
         if (wordTags.isNotEmpty()) {
             item {
-                Row(
+                FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     wordTags.forEach { label ->
                         SuggestionChip(
@@ -238,13 +279,18 @@ private fun DefinitionsTab(entry: DictionaryEntry) {
 
         // One section per sense
         itemsIndexed(entry.senses) { index, sense ->
-            SenseSection(index = index + 1, sense = sense, isLast = index == entry.senses.lastIndex)
+            SenseSection(
+                index = index + 1,
+                sense = sense,
+                isLast = index == entry.senses.lastIndex,
+                onTermClick
+            )
         }
     }
 }
 
 @Composable
-private fun SenseSection(index: Int, sense: Sense, isLast: Boolean) {
+private fun SenseSection(index: Int, sense: Sense, isLast: Boolean, onTermClick: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -308,13 +354,7 @@ private fun SenseSection(index: Int, sense: Sense, isLast: Boolean) {
 
         // Info notes (See also, Usually written as, etc.)
         sense.info.forEach { note ->
-            Text(
-                text = note,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontStyle = FontStyle.Italic,
-                modifier = Modifier.padding(start = 4.dp)
-            )
+            InfoNote(note = note, onTermClick = onTermClick)
         }
 
         // Example sentences
@@ -331,6 +371,75 @@ private fun SenseSection(index: Int, sense: Sense, isLast: Boolean) {
     }
 }
 
+
+/**
+ * Renders an info/note string.
+ *
+ * If the note matches the "see: <term> <gloss>" pattern produced by the importer,
+ * the Japanese term is rendered as a tappable underlined link. Everything else is
+ * plain italic text.
+ *
+ */
+@Composable
+private fun InfoNote(note: String, onTermClick: (String) -> Unit) {
+    val linkColor = MaterialTheme.colorScheme.primary
+    val baseColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val baseStyle = MaterialTheme.typography.bodySmall
+
+    val match = SEE_ALSO_REGEX.matchEntire(note.trim())
+
+    if (match != null) {
+        val term = match.groupValues[1]
+        val gloss = match.groupValues[2].trim()
+
+        val annotated = buildAnnotatedString {
+            withStyle(SpanStyle(color = baseColor, fontStyle = FontStyle.Italic)) {
+                append("See also: ")
+            }
+            withLink(
+                LinkAnnotation.Clickable(
+                    tag = SEE_ALSO_TAG,
+                    styles = TextLinkStyles(
+                        style = SpanStyle(
+                            color = linkColor,
+                            fontWeight = FontWeight.Medium,
+                            textDecoration = TextDecoration.Underline
+                        )
+                    ),
+                    linkInteractionListener = {
+                        // Strip furigana annotations like 女（じょ） → 女
+                        val cleanTerm = term
+                            .replace(Regex("""（[^）]*）"""), "")
+                            .replace(Regex("""\([^)]*\)"""), "")
+                            .trim()
+                        onTermClick(cleanTerm)
+                    }
+                )
+            ) {
+                append(term)
+            }
+            if (gloss.isNotBlank()) {
+                withStyle(SpanStyle(color = baseColor, fontStyle = FontStyle.Italic)) {
+                    append("  $gloss")
+                }
+            }
+        }
+
+        Text(
+            text = annotated,
+            style = baseStyle,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+    } else {
+        Text(
+            text = note,
+            style = baseStyle,
+            color = baseColor,
+            fontStyle = FontStyle.Italic,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+    }
+}
 
 @Composable
 private fun ExampleCard(example: Example) {

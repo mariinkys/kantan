@@ -83,7 +83,7 @@ class DictionaryRepositoryImpl @Inject constructor(
     )
 }
 
-private fun Char.isKanji(): Boolean {
+internal fun Char.isKanji(): Boolean {
     val cp = code
     return cp in 0x4E00..0x9FFF || cp in 0x3400..0x4DBF || cp in 0xF900..0xFAFF
 }
