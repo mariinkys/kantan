@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -45,7 +44,6 @@ import dev.mariinkys.kantan.ui.entry.EntryDetailScreen
 import dev.mariinkys.kantan.ui.favorites.FavoritesScreen
 import dev.mariinkys.kantan.ui.kanji.KanjiDetailScreen
 import dev.mariinkys.kantan.ui.search.SearchScreen
-import dev.mariinkys.kantan.ui.search.SearchViewModel
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -62,6 +60,10 @@ sealed class Screen(val route: String) {
 
     data object EntryDetail : Screen("entry/{sequence}") {
         fun createRoute(sequence: Int) = "entry/$sequence"
+    }
+
+    data object EntryByTerm : Screen("entry/term/{term}") {
+        fun createRoute(term: String) = "entry/term/${term.enc()}"
     }
 
     data object KanjiDetail : Screen("kanji/{character}") {
@@ -213,12 +215,6 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                     val sequence = backStack.arguments?.getString("sequence")?.dec() ?: ""
                     backStack.arguments?.putString("sequence", sequence)
 
-                    // Retrieve the same SearchViewModel instance that SearchScreen holds, so onQueryChange lands in the right state when we pop back.
-                    val searchEntry = remember(backStack) {
-                        navController.getBackStackEntry(Screen.Search.route)
-                    }
-                    val searchViewModel: SearchViewModel = hiltViewModel(searchEntry)
-
                     EntryDetailScreen(
                         modifier = Modifier.fillMaxSize(),
                         onBack = {
@@ -230,8 +226,30 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                             navController.navigate(Screen.KanjiDetail.createRoute(character))
                         },
                         onTermClick = { term ->
-                            searchViewModel.onQueryChange(term)
-                            navController.popBackStack(Screen.Search.route, inclusive = false)
+                            navController.navigate(Screen.EntryByTerm.createRoute(term))
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.EntryByTerm.route,
+                    arguments = listOf(navArgument("term") { type = NavType.StringType })
+                ) { backStack ->
+                    val term = backStack.arguments?.getString("term")?.dec() ?: ""
+                    backStack.arguments?.putString("term", term)
+                    
+                    EntryDetailScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = {
+                            if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                navController.popBackStack()
+                            }
+                        },
+                        onKanjiClick = { character ->
+                            navController.navigate(Screen.KanjiDetail.createRoute(character))
+                        },
+                        onTermClick = { newTerm ->
+                            navController.navigate(Screen.EntryByTerm.createRoute(newTerm))
                         }
                     )
                 }
