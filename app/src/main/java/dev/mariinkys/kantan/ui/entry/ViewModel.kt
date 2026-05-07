@@ -4,8 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.mariinkys.kantan.domain.model.CustomList
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.domain.model.KanjiEntry
+import dev.mariinkys.kantan.domain.repository.CustomListsRepository
 import dev.mariinkys.kantan.domain.repository.DictionaryRepository
 import dev.mariinkys.kantan.domain.repository.FavoritesRepository
 import dev.mariinkys.kantan.util.ConjugationTable
@@ -35,7 +37,8 @@ sealed interface EntryDetailState {
 class EntryDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: DictionaryRepository,
-    private val favoritesRepository: FavoritesRepository
+    private val favoritesRepository: FavoritesRepository,
+    private val customListsRepository: CustomListsRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow<EntryDetailState>(EntryDetailState.Loading)
     val state: StateFlow<EntryDetailState> = _state
@@ -48,6 +51,20 @@ class EntryDetailViewModel @Inject constructor(
         .filterNotNull()
         .flatMapLatest { favoritesRepository.isFavorite(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val listsWithMembership: StateFlow<List<Pair<CustomList, Boolean>>> = _state
+        .map { (it as? EntryDetailState.Success)?.entry?.id }
+        .filterNotNull()
+        .flatMapLatest { seq ->
+            customListsRepository.getAllLists().map { lists ->
+                lists.map { list ->
+                    val alreadyIn = customListsRepository.isEntryInList(list.id, seq)
+                    list to alreadyIn
+                }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
         val sequence = savedStateHandle.get<Int>("sequence")
@@ -77,6 +94,13 @@ class EntryDetailViewModel @Inject constructor(
                 kanji = kanji,
                 conjugationTable = conjugationTable
             )
+        }
+    }
+
+    fun addToList(listId: Int) {
+        val seq = resolvedSequence ?: return
+        viewModelScope.launch {
+            customListsRepository.addEntry(listId, seq)
         }
     }
 

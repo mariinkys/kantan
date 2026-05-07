@@ -1,6 +1,7 @@
 package dev.mariinkys.kantan.ui.entry
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -20,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Card
@@ -28,16 +31,22 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.LinkAnnotation
@@ -54,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mariinkys.kantan.data.repository.isKanji
+import dev.mariinkys.kantan.domain.model.CustomList
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.domain.model.Example
 import dev.mariinkys.kantan.domain.model.KanjiEntry
@@ -79,8 +89,11 @@ fun EntryDetailScreen(
     modifier: Modifier,
     viewModel: EntryDetailViewModel = hiltViewModel()
 ) {
+    var showListSheet by remember { mutableStateOf(false) }
+
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isFavorite by viewModel.isFavorite.collectAsStateWithLifecycle()
+    val listsWithMembership by viewModel.listsWithMembership.collectAsStateWithLifecycle()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -130,6 +143,16 @@ fun EntryDetailScreen(
                     actions = {
                         // only show the favorite button once the entry has loaded
                         if (state is EntryDetailState.Success) {
+                            IconButton(onClick = {
+                                showListSheet = true
+                            }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.List,
+                                    contentDescription = "Add word to custom list",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
                             IconButton(onClick = viewModel::toggleFavorite) {
                                 Icon(
                                     imageVector = if (isFavorite)
@@ -176,6 +199,21 @@ fun EntryDetailScreen(
                 modifier = Modifier.padding(innerPadding)
             )
         }
+    }
+
+    if (showListSheet) {
+        AddToListBottomSheet(
+            listsWithMembership = listsWithMembership,
+            onDismiss = {
+                @Suppress("AssignedValueIsNeverRead")
+                showListSheet = false
+            },
+            onListSelected = { listId ->
+                viewModel.addToList(listId)
+                @Suppress("AssignedValueIsNeverRead")
+                showListSheet = false
+            }
+        )
     }
 }
 
@@ -623,4 +661,78 @@ private fun StatChip(label: String) {
         onClick = {},
         label = { Text(label, style = MaterialTheme.typography.labelSmall) }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddToListBottomSheet(
+    listsWithMembership: List<Pair<CustomList, Boolean>>,
+    onDismiss: () -> Unit,
+    onListSelected: (Int) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Text(
+            text = "Add to list",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 8.dp)
+        )
+
+        HorizontalDivider()
+
+        if (listsWithMembership.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No lists yet — create one from My Lists",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            LazyColumn(
+                contentPadding = PaddingValues(bottom = 32.dp)
+            ) {
+                items(
+                    items = listsWithMembership,
+                    key = { it.first.id }
+                ) { (list, alreadyIn) ->
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                text = list.name,
+                                color = if (alreadyIn)
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                else
+                                    MaterialTheme.colorScheme.onSurface
+                            )
+                        },
+                        trailingContent = {
+                            if (alreadyIn) {
+                                Text(
+                                    text = "Already added",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        modifier = Modifier.clickable(enabled = !alreadyIn) {
+                            onListSelected(list.id)
+                        }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
+                }
+            }
+        }
+    }
 }
