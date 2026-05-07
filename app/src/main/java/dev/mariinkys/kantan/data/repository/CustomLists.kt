@@ -10,6 +10,7 @@ import dev.mariinkys.kantan.domain.model.CustomList
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.domain.repository.CustomListsRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -94,4 +95,9 @@ class CustomListsRepositoryImpl @Inject constructor(
             })
         }
     }
+
+    override suspend fun isEntryInList(listId: Int, sequenceId: Int): Boolean =
+        listsFlow.map { lists ->
+            lists.firstOrNull { it.id == listId }?.sequences?.contains(sequenceId) ?: false
+        }.first()
 }
