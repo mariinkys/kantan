@@ -8,6 +8,8 @@ import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.domain.model.KanjiEntry
 import dev.mariinkys.kantan.domain.repository.DictionaryRepository
 import dev.mariinkys.kantan.domain.repository.FavoritesRepository
+import dev.mariinkys.kantan.util.ConjugationTable
+import dev.mariinkys.kantan.util.VerbConjugator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,7 +24,11 @@ import javax.inject.Inject
 sealed interface EntryDetailState {
     data object Loading : EntryDetailState
     data class Error(val message: String) : EntryDetailState
-    data class Success(val entry: DictionaryEntry, val kanji: List<KanjiEntry>) : EntryDetailState
+    data class Success(
+        val entry: DictionaryEntry,
+        val kanji: List<KanjiEntry>,
+        val conjugationTable: ConjugationTable? = null
+    ) : EntryDetailState
 }
 
 @HiltViewModel
@@ -60,8 +66,17 @@ class EntryDetailViewModel @Inject constructor(
             }
 
             resolvedSequence = entry.id
+
             val kanji = repository.getKanjiForWord(entry.expression)
-            _state.value = EntryDetailState.Success(entry = entry, kanji = kanji)
+
+            val allPosTags = entry.senses.flatMap { it.posTags }
+            val conjugationTable = VerbConjugator.conjugate(entry.expression, allPosTags)
+
+            _state.value = EntryDetailState.Success(
+                entry = entry,
+                kanji = kanji,
+                conjugationTable = conjugationTable
+            )
         }
     }
 
