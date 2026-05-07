@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -30,6 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavType
@@ -40,6 +43,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.mariinkys.kantan.R
 import dev.mariinkys.kantan.ui.AboutScreen
+import dev.mariinkys.kantan.ui.KanaTablesScreen
 import dev.mariinkys.kantan.ui.entry.EntryDetailScreen
 import dev.mariinkys.kantan.ui.favorites.FavoritesScreen
 import dev.mariinkys.kantan.ui.kanji.KanjiDetailScreen
@@ -55,6 +59,7 @@ sealed class Screen(val route: String) {
     data object Search : Screen("search")
 
     data object About : Screen("about")
+    data object KanaTables : Screen("kana_tables")
 
     data object Favorites : Screen("favorites")
 
@@ -128,6 +133,33 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                     selected = currentRoute == Screen.Favorites.route,
                     onClick = {
                         navController.navigate(Screen.Favorites.route) {
+                            popUpTo(Screen.Search.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+
+                        scope.launch {
+                            drawerState.close()
+                        }
+                    },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+
+                NavigationDrawerItem(
+                    icon = {
+                        Text(
+                            text = "か",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = LocalContentColor.current,
+                            modifier = Modifier.size(24.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    },
+                    label = { Text("Kana Tables") },
+                    selected = currentRoute == Screen.KanaTables.route,
+                    onClick = {
+                        navController.navigate(Screen.KanaTables.route) {
                             popUpTo(Screen.Search.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
@@ -237,7 +269,7 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                 ) { backStack ->
                     val term = backStack.arguments?.getString("term")?.dec() ?: ""
                     backStack.arguments?.putString("term", term)
-                    
+
                     EntryDetailScreen(
                         modifier = Modifier.fillMaxSize(),
                         onBack = {
@@ -270,6 +302,14 @@ fun AppNavigation(modifier: Modifier = Modifier) {
 
                 composable(Screen.About.route) {
                     AboutScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        onMenuClick = { scope.launch { drawerState.open() } })
+                }
+
+                composable(Screen.KanaTables.route) {
+                    KanaTablesScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
