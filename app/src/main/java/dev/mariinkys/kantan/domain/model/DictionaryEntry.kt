@@ -11,9 +11,16 @@ data class DictionaryEntry(
     val tags: String,
     val score: Int = 0
 ) {
-    /** First gloss of first sense — for list/favorites display. */
+    /** Up to 3 glosses from the first sense — for list/favorites display. */
     val shortDefinition: String
-        get() = senses.firstOrNull()?.glosses?.firstOrNull()?.trim() ?: ""
+        get() = senses
+            .firstOrNull()
+            ?.glosses
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.take(3)
+            ?.joinToString(", ")
+            ?: ""
 }
 
 data class Sense(
