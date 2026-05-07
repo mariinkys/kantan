@@ -57,6 +57,7 @@ import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.domain.model.Example
 import dev.mariinkys.kantan.domain.model.KanjiEntry
 import dev.mariinkys.kantan.domain.model.Sense
+import dev.mariinkys.kantan.util.ConjugationTable
 import dev.mariinkys.kantan.util.resolveTag
 import kotlinx.coroutines.launch
 
@@ -168,6 +169,7 @@ fun EntryDetailScreen(
                 kanji = s.kanji,
                 onKanjiClick = onKanjiClick,
                 onTermClick = onTermClick,
+                conjugationTable = s.conjugationTable,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -178,14 +180,17 @@ fun EntryDetailScreen(
 private fun EntryDetailContent(
     entry: DictionaryEntry,
     kanji: List<KanjiEntry>,
+    conjugationTable: ConjugationTable?,
     onKanjiClick: (String) -> Unit,
     onTermClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val tabs = buildList {
         add("Definitions")
+        if (conjugationTable != null) add("Inflections")
         if (kanji.isNotEmpty()) add("Kanji")
     }
+    
     val pagerState = rememberPagerState { tabs.size }
     val scope = rememberCoroutineScope()
 
@@ -206,6 +211,7 @@ private fun EntryDetailContent(
         ) { page ->
             when (tabs[page]) {
                 "Definitions" -> DefinitionsTab(entry, onTermClick)
+                "Inflections" -> ConjugationsTab(conjugationTable!!)
                 "Kanji" -> KanjiTab(kanji, onKanjiClick)
             }
         }
@@ -463,6 +469,69 @@ private fun ExampleCard(example: Example) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun ConjugationsTab(table: ConjugationTable) {
+    LazyColumn(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    "Form", Modifier.weight(2f),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Affirmative", Modifier.weight(2f),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Negative", Modifier.weight(2f),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            HorizontalDivider()
+        }
+
+        itemsIndexed(table.rows) { index, row ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    row.label, Modifier.weight(2f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    row.affirmative, Modifier.weight(2f),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    row.negative, Modifier.weight(2f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            if (index < table.rows.lastIndex) HorizontalDivider(thickness = 0.5.dp)
+        }
     }
 }
 
