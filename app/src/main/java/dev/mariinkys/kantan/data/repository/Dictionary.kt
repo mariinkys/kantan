@@ -47,6 +47,11 @@ class DictionaryRepositoryImpl @Inject constructor(
             ?.groupAndMap()
             ?.firstOrNull()
 
+    override suspend fun getEntryByTerm(term: String): DictionaryEntry? =
+        termDao.searchByPrefix(term)
+            .groupAndMap()
+            .firstOrNull { it.expression == term || it.variants.contains(term) }
+
     override suspend fun getRandomEntry(): DictionaryEntry? {
         val randomSense = termDao.getRandomCommonTerm() ?: return null
         return getEntry(randomSense.sequence)
