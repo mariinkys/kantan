@@ -59,7 +59,7 @@ jobs:
             --ks-key-alias "$ALIAS" \
             --ks-pass pass:"$KEY_PASSWORD" \
             --key-pass pass:"$KEY_PASSWORD" \
-            --out kantan-full.apk \
+            --out kantan-full-${{ github.event.inputs.tag_name }}.apk \
             full-aligned.apk
           
           # 3.2 Align the Foss Variant APK
@@ -70,17 +70,22 @@ jobs:
             --ks-key-alias "$ALIAS" \
             --ks-pass pass:"$KEY_PASSWORD" \
             --key-pass pass:"$KEY_PASSWORD" \
-            --out kantan-foss.apk \
+            --out kantan-foss-${{ github.event.inputs.tag_name }}.apk \
             foss-aligned.apk
           
           # 5. Cleanup
           rm release.jks full-aligned.apk foss-aligned.apk
 
+      - name: Verify APKs exist
+        run: |
+          test -f kantan-full-${{ github.event.inputs.tag_name }}.apk
+          test -f kantan-foss-${{ github.event.inputs.tag_name }}.apk
+
       - name: Generate APK Hashes
         id: generate_hash
         run: |
-          full_sha=$(sha256sum kantan-full.apk | awk '{print $1}')
-          foss_sha=$(sha256sum kantan-foss.apk | awk '{print $1}')
+          full_sha=$(sha256sum kantan-full-${{ github.event.inputs.tag_name }}.apk | awk '{print $1}')
+          foss_sha=$(sha256sum kantan-foss-${{ github.event.inputs.tag_name }}.apk | awk '{print $1}')
 
           echo "full_sha=$full_sha" >> $GITHUB_OUTPUT
           echo "foss_sha=$foss_sha" >> $GITHUB_OUTPUT
