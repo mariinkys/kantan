@@ -36,6 +36,9 @@ jobs:
       - name: Build Both Variants Release APK
         run: ./gradlew assembleFullRelease assembleFossRelease
 
+      - name: Debug APK output
+        run: find app/build/outputs/apk -type f
+
       - name: Sign and Align APK
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
