@@ -7,7 +7,7 @@
 ![GitHub Repo Stars](https://img.shields.io/github/stars/mariinkys/kantan)
 ![GitHub Release](https://img.shields.io/github/v/release/mariinkys/kantan)
 
-<h3>Kantan is an Open Source Japanese dictionary and learning tool for Android</h3>
+<h3>Kantan is an open-source Japanese dictionary and learning tool for Android</h3>
 
   <img alt="Main Window" width="200" src="resources/screenshots/main-light.png"/>
   <img alt="Character Recognition Window" width="200" src="resources/screenshots/char-recognition-light.png"/>
@@ -57,7 +57,8 @@ Features:
 
 * Fast and reliable Japanese dictionary with word and kanji lookup
 * Draw characters to search when you don’t know how to type them
-* Stroke order diagrams to learn how to write kanji correctly
+* Add words to favorites and other custom lists
+* Stroke-order diagrams to learn how to write kanji correctly
 * Multiple readings and meanings for each entry
 * Example sentences to understand context
 * Clean, distraction-free interface designed for learning
