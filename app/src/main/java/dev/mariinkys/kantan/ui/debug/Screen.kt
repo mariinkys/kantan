@@ -70,7 +70,6 @@ fun DebugScreen(
     val context = LocalContext.current
     val workManager = remember { WorkManager.getInstance(context) }
 
-    // True only while the import job is actively running or enqueued
     val isImporting by remember(workManager) {
         workManager.getWorkInfosForUniqueWorkFlow("DICT_IMPORT")
             .map { infos ->
