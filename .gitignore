@@ -18,3 +18,4 @@ local.properties
 *.p12
 /app/release
 /app/src/main/assets/kanji
+/app/src/main/assets/databases

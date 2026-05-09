@@ -25,10 +25,22 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): KantanDatabase =
-        Room.databaseBuilder(context, KantanDatabase::class.java, KantanDatabase.DATABASE_NAME)
-            .fallbackToDestructiveMigration(dropAllTables = true)
-            .build()
+    fun provideDatabase(@ApplicationContext context: Context): KantanDatabase {
+        val assetExists = runCatching {
+            context.assets.open("databases/kantan_db.db").close()
+            true
+        }.getOrDefault(false)
+
+        val builder = Room.databaseBuilder(
+            context,
+            KantanDatabase::class.java,
+            KantanDatabase.DATABASE_NAME
+        ).fallbackToDestructiveMigration(dropAllTables = true)
+
+        if (assetExists) builder.createFromAsset("databases/kantan_db.db")
+
+        return builder.build()
+    }
 
     @Provides
     fun provideTermDao(db: KantanDatabase): TermDao = db.termDao()

@@ -70,6 +70,9 @@ interface TermDao {
     )
     suspend fun getRandomCommonTerm(): TermEntity?
 
+    @Query("DELETE FROM terms")
+    suspend fun deleteAll()
+
     @Query("SELECT COUNT(*) FROM terms")
     suspend fun count(): Int
 }
@@ -84,6 +87,9 @@ interface KanjiDao {
 
     @Query("SELECT * FROM kanji WHERE character IN (:chars)")
     suspend fun getByCharacters(chars: List<String>): List<KanjiEntity>
+
+    @Query("DELETE FROM kanji")
+    suspend fun deleteAll()
 
     @Query("SELECT COUNT(*) FROM kanji")
     suspend fun count(): Int
