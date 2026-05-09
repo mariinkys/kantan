@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -35,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -42,11 +44,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import dev.mariinkys.kantan.BuildConfig
 import dev.mariinkys.kantan.R
 import dev.mariinkys.kantan.ui.AboutScreen
 import dev.mariinkys.kantan.ui.KanaTablesScreen
 import dev.mariinkys.kantan.ui.customLists.CustomListsScreen
 import dev.mariinkys.kantan.ui.customLists.details.ListEntriesScreen
+import dev.mariinkys.kantan.ui.debug.DebugScreen
+import dev.mariinkys.kantan.ui.debug.DebugViewModel
 import dev.mariinkys.kantan.ui.entry.EntryDetailScreen
 import dev.mariinkys.kantan.ui.favorites.FavoritesScreen
 import dev.mariinkys.kantan.ui.kanji.KanjiDetailScreen
@@ -62,6 +67,7 @@ sealed class Screen(val route: String) {
     data object Search : Screen("search")
 
     data object About : Screen("about")
+    data object Debug : Screen("debug")
 
     data object KanaTables : Screen("kana_tables")
 
@@ -216,6 +222,27 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                     },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
+
+                if (BuildConfig.DEBUG) {
+                    NavigationDrawerItem(
+                        icon = { Icon(Icons.Default.Build, contentDescription = null) },
+                        label = { Text("Debug") },
+                        selected = currentRoute == Screen.Debug.route,
+                        onClick = {
+                            navController.navigate(Screen.Debug.route) {
+                                popUpTo(Screen.Search.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+
+                            scope.launch {
+                                drawerState.close()
+                            }
+                        },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
+                }
+
             }
         }) {
 
@@ -383,6 +410,18 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                             .fillMaxSize()
                             .padding(innerPadding),
                         onMenuClick = { scope.launch { drawerState.open() } })
+                }
+
+                composable(Screen.Debug.route) {
+                    val vm: DebugViewModel = hiltViewModel()
+                    DebugScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        onMenuClick = { scope.launch { drawerState.open() } },
+                        termDao = vm.termDao,
+                        kanjiDao = vm.kanjiDao
+                    )
                 }
             }
         }

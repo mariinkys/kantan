@@ -36,9 +36,15 @@ class DictionaryImportWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
-            if (termDao.count() > 0 && kanjiDao.count() > 0) {
+            val force = inputData.getBoolean("force", false)
+            if (!force && termDao.count() > 0 && kanjiDao.count() > 0) {
                 Log.i(tag, "DB already populated, skipping")
                 return Result.success()
+            }
+            if (force) {
+                termDao.deleteAll()
+                kanjiDao.deleteAll()
+                Log.i(tag, "Cleared existing data for rebuild")
             }
             importTermBanks()
             importKanjiBanks()
