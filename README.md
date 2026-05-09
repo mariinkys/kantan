@@ -83,6 +83,13 @@ the [Release Notes](https://github.com/mariinkys/kantan/releases). You can
 use [AppVerifier](https://github.com/soupslurpr/AppVerifier) to compare the installed app against
 these values.
 
+## Build Instructions
+
+1. Create Main Assets Folder: `mkdir -p app/src/main/assets/`
+2. Extract Kanji Assets: `unzip assets/kanji.zip -d app/src/main/assets`
+3. Extract Database: `unzip assets/databases.zip -d app/src/main/assets`
+4. Compile the App: `./gradlew assembleFullRelease assembleFossRelease`
+
 ## Copyright and Licensing
 
 - The dictionary words and kanji come from the JMDict and KANJIDIC files owned by the
