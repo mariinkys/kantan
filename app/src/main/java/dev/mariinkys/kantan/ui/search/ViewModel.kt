@@ -31,7 +31,7 @@ sealed interface RandomEntryDetailState {
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val repository: DictionaryRepository
+    private val repository: DictionaryRepository,
 ) : ViewModel() {
 
     var query by mutableStateOf("")
