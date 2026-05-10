@@ -51,6 +51,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mariinkys.kantan.BuildConfig
+import dev.mariinkys.kantan.R
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
 import dev.mariinkys.kantan.ui.search.handwriting.HandwritingBottomSheet
 import kotlinx.coroutines.launch
@@ -66,6 +68,7 @@ import kotlinx.coroutines.launch
 fun SearchScreen(
     onMenuClick: () -> Unit,
     onEntryClick: (sequence: Int) -> Unit,
+    onOcrClick: () -> Unit,
     modifier: Modifier,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
@@ -82,6 +85,7 @@ fun SearchScreen(
             onClear = viewModel::clearQuery,
             onHandwritingClick = { showHandwriting = true },
             onMenuClick = onMenuClick,
+            onOcrClick = onOcrClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
@@ -128,6 +132,7 @@ private fun SearchBar(
     onClear: () -> Unit,
     onHandwritingClick: () -> Unit,
     onMenuClick: () -> Unit,
+    onOcrClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -175,6 +180,13 @@ private fun SearchBar(
                         Icon(
                             imageVector = Icons.Default.Create,
                             contentDescription = "Draw to search",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(onClick = onOcrClick) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_camera),
+                            contentDescription = "Scan Japanese Text",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }

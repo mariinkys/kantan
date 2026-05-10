@@ -55,6 +55,7 @@ import dev.mariinkys.kantan.ui.debug.DebugViewModel
 import dev.mariinkys.kantan.ui.entry.EntryDetailScreen
 import dev.mariinkys.kantan.ui.favorites.FavoritesScreen
 import dev.mariinkys.kantan.ui.kanji.KanjiDetailScreen
+import dev.mariinkys.kantan.ui.ocr.OcrScreen
 import dev.mariinkys.kantan.ui.search.SearchScreen
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
@@ -69,6 +70,7 @@ sealed class Screen(val route: String) {
     data object About : Screen("about")
     data object Debug : Screen("debug")
 
+    data object Ocr : Screen("ocr")
     data object KanaTables : Screen("kana_tables")
 
     data object Favorites : Screen("favorites")
@@ -271,6 +273,11 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                                     )
                                 )
                             }
+                        },
+                        onOcrClick = {
+                            if (it.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                navController.navigate(Screen.Ocr.route)
+                            }
                         }
                     )
                 }
@@ -288,6 +295,22 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                                     sequence
                                 )
                             )
+                        }
+                    )
+                }
+
+                composable(Screen.Ocr.route) { backStack ->
+                    OcrScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onBack = {
+                            if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                navController.popBackStack()
+                            }
+                        },
+                        onEntryClick = { sequence ->
+                            if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                navController.navigate(Screen.EntryDetail.createRoute(sequence))
+                            }
                         }
                     )
                 }

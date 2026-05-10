@@ -20,9 +20,12 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# ML Kit Digital Ink Recognition rules
+# ML Kit Digital Ink Recognition rules (Handwritting)
 # Keep the main API entry points
 -keep class com.google.mlkit.vision.digitalink.** { *; }
 # Keep the internal factory/registry classes
 -keep class com.google.mlkit.common.internal.** { *; }
 -keep class com.google.mlkit.common.sdkinternal.** { *; }
+
+# OCR
+-keep class com.google.mlkit.vision.text.** { *; }

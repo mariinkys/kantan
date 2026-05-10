@@ -48,6 +48,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules-common.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -109,7 +110,16 @@ dependencies {
 
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-    // Japanese chars recognition
+    // Handwriting
     add("fullImplementation", libs.digital.ink.recognition)
     add("fullImplementation", libs.kotlinx.coroutines.play.services)
+
+    // OCR
+    add("fullImplementation", libs.text.recognition.japanese)
+    add("fullImplementation", libs.androidx.camera.view)
+    add("fullImplementation", libs.androidx.camera.core)
+    add("fullImplementation", libs.androidx.camera.mlkit.vision)
+    add("fullImplementation", libs.androidx.camera.lifecycle)
+    add("fullImplementation", libs.androidx.camera.camera2)
+    add("fullImplementation", libs.accompanist.permissions)
 }
