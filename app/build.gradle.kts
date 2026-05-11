@@ -8,6 +8,10 @@ plugins {
 
 android {
     namespace = "dev.mariinkys.kantan"
+
+    //https://developer.android.com/tools/releases/build-tools
+    buildToolsVersion = "36.0.0"
+    
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -39,6 +43,18 @@ android {
         }
     }
 
+    signingConfigs {
+        val keystoreFile = System.getenv("KEYSTORE_FILE")
+        if (keystoreFile != null) {
+            create("release") {
+                storeFile = file(keystoreFile)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -48,6 +64,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules-common.pro"
             )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {
