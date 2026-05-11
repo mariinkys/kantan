@@ -12,88 +12,53 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Extract Kanji Assets
+      - name: Extract Assets
         run: |
           mkdir -p app/src/main/assets/
           unzip assets/kanji.zip -d app/src/main/assets
-
-      - name: Extract Database
-        run: |
           unzip assets/databases.zip -d app/src/main/assets
 
-      - name: Set up JDK 25
+      - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '25'
+          java-version: '17'
           cache: 'gradle'
 
-      - name: Build Both Variants Release APK
-        run: ./gradlew assembleFullRelease assembleFossRelease
+      - name: Decode Keystore
+        run: echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.jks
 
-      - name: Debug APK output
-        run: find app/build/outputs/apk -type f
-
-      - name: Sign and Align APK
-        id: final_process
+      - name: Build and Sign All Variants
         env:
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          ALIAS: ${{ secrets.ALIAS }}
+          KEYSTORE_FILE: ${{ github.workspace }}/release.jks
+          KEY_ALIAS: ${{ secrets.ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          # 1. Find build tools
-          BUILD_TOOLS_PATH=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+          ./gradlew assembleFullRelease assembleFossRelease
           
-          # 2. Decode keystore from the env variable
-          echo "$SIGNING_KEY" | base64 -d > release.jks
+          # Move and rename for easier identification
+          mv app/build/outputs/apk/full/release/app-full-release.apk kantan-full.apk
+          mv app/build/outputs/apk/foss/release/app-foss-release.apk kantan-foss.apk
           
-          # 3.1 Align the Full Variant APK
-          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/full/release/app-full-release-unsigned.apk full-aligned.apk
-          
-          # 4.1 Sign the Full APK 
-          $BUILD_TOOLS_PATH/apksigner sign --ks release.jks \
-            --ks-key-alias "$ALIAS" \
-            --ks-pass pass:"$KEY_PASSWORD" \
-            --key-pass pass:"$KEY_PASSWORD" \
-            --out kantan-full.apk \
-            full-aligned.apk
-          
-          # 3.2 Align the Foss Variant APK
-          $BUILD_TOOLS_PATH/zipalign -v 4 app/build/outputs/apk/foss/release/app-foss-release-unsigned.apk foss-aligned.apk
-          
-          # 4.2 Sign the Foss APK 
-          $BUILD_TOOLS_PATH/apksigner sign --ks release.jks \
-            --ks-key-alias "$ALIAS" \
-            --ks-pass pass:"$KEY_PASSWORD" \
-            --key-pass pass:"$KEY_PASSWORD" \
-            --out kantan-foss.apk \
-            foss-aligned.apk
-          
-          # 5.1 Generate Hash for logs
-          sha256full=$(sha256sum kantan-full.apk | awk '{ print $1 }')
-          echo "SHA-256 Hash: $sha256full"
-          
-          # 5.2 Generate Hash for logs
-          sha256foss=$(sha256sum kantan-foss.apk | awk '{ print $1 }')
-          echo "SHA-256 Hash: $sha256foss"
-          
-          # 6. Cleanup
-          rm release.jks full-aligned.apk foss-aligned.apk
-          
-          # 7. Set output for the next step
-          echo "full_apk=kantan-full.apk" >> $GITHUB_OUTPUT
-          echo "foss_apk=kantan-foss.apk" >> $GITHUB_OUTPUT
+          # Verification logs
+          echo "Full APK SHA-256: $(sha256sum kantan-full.apk | awk '{ print $1 }')"
+          echo "Foss APK SHA-256: $(sha256sum kantan-foss.apk | awk '{ print $1 }')"
 
       - name: Upload Full APK
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: kantan-full-latest
-          path: ${{ steps.final_process.outputs.full_apk }}
+          path: kantan-full.apk
           retention-days: 3
 
       - name: Upload FOSS APK
         uses: actions/upload-artifact@v7
         with:
           name: kantan-foss-latest
-          path: ${{ steps.final_process.outputs.foss_apk }}
+          path: kantan-foss.apk
           retention-days: 3
+
+      - name: Cleanup
+        if: always()
+        run: rm -f release.jks
