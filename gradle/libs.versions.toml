@@ -2,7 +2,7 @@
 agp = "9.2.1"
 digitalInkRecognition = "19.0.0"
 kotlin = "2.3.21"
-kotlinxCoroutinesPlayServices = "1.10.2"
+kotlinxCoroutinesPlayServices = "1.11.0"
 ksp = "2.3.7"
 hilt = "2.59.2"
 hiltNavigationCompose = "1.3.0"
