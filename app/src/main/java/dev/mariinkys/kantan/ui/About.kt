@@ -163,6 +163,16 @@ fun AboutScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
             TextButton(onClick = {
+                uriHandler.openUri("https://buymeacoffee.com/mariinkys")
+            }) {
+                Text(
+                    text = "Donate",
+                    style = MaterialTheme.typography.labelLarge,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            TextButton(onClick = {
                 uriHandler.openUri("https://github.com/mariinkys")
             }) {
                 Text(

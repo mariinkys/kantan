@@ -11,7 +11,7 @@ android {
 
     //https://developer.android.com/tools/releases/build-tools
     buildToolsVersion = "36.0.0"
-    
+
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -22,8 +22,8 @@ android {
         applicationId = "dev.mariinkys.kantan"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
