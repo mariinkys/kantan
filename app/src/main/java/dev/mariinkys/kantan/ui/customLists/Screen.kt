@@ -125,7 +125,18 @@ fun CustomListsScreen(
                                     list = list,
                                     onClick = { onListClick(list.id, list.name) },
                                     onDelete = { viewModel.deleteList(list.id) },
-                                    onRename = { newName -> viewModel.renameList(list.id, newName) }
+                                    onRename = { newName ->
+                                        viewModel.renameList(
+                                            list.id,
+                                            newName
+                                        )
+                                    },
+                                    onAddBulk = { terms ->
+                                        viewModel.addBulkEntries(
+                                            list.id,
+                                            terms
+                                        )
+                                    }
                                 )
                                 HorizontalDivider(modifier = Modifier.padding(start = 16.dp))
                             }
@@ -155,10 +166,12 @@ private fun ListFolderRow(
     list: CustomList,
     onClick: () -> Unit,
     onDelete: () -> Unit,
-    onRename: (String) -> Unit
+    onRename: (String) -> Unit,
+    onAddBulk: (String) -> Unit
 ) {
     var showSheet by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
+    var showAddBulkDialog by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
     if (showRenameDialog) {
@@ -172,6 +185,20 @@ private fun ListFolderRow(
             onDismiss = {
                 @Suppress("AssignedValueIsNeverRead")
                 showRenameDialog = false
+            }
+        )
+    }
+
+    if (showAddBulkDialog) {
+        AddBulkDialog(
+            onConfirm = { terms ->
+                @Suppress("AssignedValueIsNeverRead")
+                showAddBulkDialog = false
+                onAddBulk(terms)
+            },
+            onDismiss = {
+                @Suppress("AssignedValueIsNeverRead")
+                showAddBulkDialog = false
             }
         )
     }
@@ -203,6 +230,24 @@ private fun ListFolderRow(
                     showSheet = false
                     @Suppress("AssignedValueIsNeverRead")
                     showRenameDialog = true
+                },
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+            NavigationDrawerItem(
+                icon = {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                label = { Text("Add Bulk", color = MaterialTheme.colorScheme.primary) },
+                selected = false,
+                onClick = {
+                    @Suppress("AssignedValueIsNeverRead")
+                    showSheet = false
+                    @Suppress("AssignedValueIsNeverRead")
+                    showAddBulkDialog = true
                 },
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
@@ -331,6 +376,41 @@ private fun RenameListDialog(
                 enabled = name.isNotBlank() && name.trim() != currentName
             ) {
                 Text("Rename")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun AddBulkDialog(
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var terms by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Bulk Words") },
+        text = {
+            OutlinedTextField(
+                value = terms,
+                onValueChange = { terms = it },
+                label = { Text("Terms") },
+                supportingText = { Text("Separate with commas (e.g., 女, 学校, 学生)") },
+                minLines = 3,
+                maxLines = 5,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (terms.isNotBlank()) onConfirm(terms.trim()) },
+                enabled = terms.isNotBlank()
+            ) {
+                Text("Add")
             }
         },
         dismissButton = {

@@ -14,6 +14,7 @@ interface CustomListsRepository {
     suspend fun deleteList(listId: Int)
     suspend fun renameList(listId: Int, name: String)
     suspend fun addEntry(listId: Int, sequenceId: Int)
+    suspend fun addMultipleEntry(listId: Int, sequenceIds: List<Int>)
     suspend fun removeEntry(listId: Int, sequenceId: Int)
 
     suspend fun isEntryInList(listId: Int, sequenceId: Int): Boolean

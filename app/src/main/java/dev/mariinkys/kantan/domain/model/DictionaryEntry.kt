@@ -21,6 +21,9 @@ data class DictionaryEntry(
             ?.take(3)
             ?.joinToString(", ")
             ?: ""
+
+    val singleReading: String
+        get() = reading.substringBefore('、').trim()
 }
 
 data class Sense(

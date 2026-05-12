@@ -9,6 +9,9 @@ import dev.mariinkys.kantan.domain.model.KanjiEntry
 import dev.mariinkys.kantan.domain.repository.DictionaryRepository
 import dev.mariinkys.kantan.util.RomajiConverter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -53,6 +56,25 @@ class DictionaryRepositoryImpl @Inject constructor(
         termDao.searchByPrefix(term)
             .groupAndMap()
             .firstOrNull { it.expression == term || it.variants.contains(term) }
+
+    /**
+     * Gets a string with different terms divided by either ',' or '、' and returns all the EXACTLY matching dictionary entries
+     * Ej: 女、学校、学生 or 女,学校,学生
+     */
+    override suspend fun getBulkEntriesByTerms(terms: String): List<DictionaryEntry> =
+        coroutineScope {
+            if (terms.isBlank()) return@coroutineScope emptyList()
+
+            terms.split(',', '、')
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .distinct() // Avoid querying the same term twice if the user inputs "女, 女"
+                .map { term ->
+                    async { getEntryByTerm(term) }
+                }
+                .awaitAll()
+                .filterNotNull()
+        }
 
     override suspend fun getRandomEntry(): DictionaryEntry? {
         val randomSense = termDao.getRandomCommonTerm() ?: return null

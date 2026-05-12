@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.mariinkys.kantan.domain.model.CustomList
 import dev.mariinkys.kantan.domain.repository.CustomListsRepository
+import dev.mariinkys.kantan.domain.repository.DictionaryRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -20,7 +21,8 @@ sealed interface CustomListsState {
 
 @HiltViewModel
 class CustomListsViewModel @Inject constructor(
-    private val repository: CustomListsRepository
+    private val repository: CustomListsRepository,
+    private val dictionaryRepository: DictionaryRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<CustomListsState>(CustomListsState.Loading)
@@ -51,7 +53,22 @@ class CustomListsViewModel @Inject constructor(
     fun renameList(listId: Int, name: String) = viewModelScope.launch {
         repository.renameList(listId, name)
     }
-    
+
+    fun addBulkEntries(listId: Int, terms: String) = viewModelScope.launch {
+        try {
+            val entries = dictionaryRepository.getBulkEntriesByTerms(terms)
+
+            if (entries.isNotEmpty()) {
+                repository.addMultipleEntry(listId, entries.map { it.id })
+                _events.emit(CustomListsEvent.ShowSnackbar("Added ${entries.size} words to the list"))
+            } else {
+                _events.emit(CustomListsEvent.ShowSnackbar("No matching words found"))
+            }
+        } catch (e: Exception) {
+            _events.emit(CustomListsEvent.ShowSnackbar("Error adding words: ${e.localizedMessage}"))
+        }
+    }
+
     fun deleteList(id: Int) = viewModelScope.launch { repository.deleteList(id) }
 }
 

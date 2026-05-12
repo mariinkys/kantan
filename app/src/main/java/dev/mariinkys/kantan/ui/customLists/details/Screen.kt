@@ -135,7 +135,7 @@ private fun ListEntryRow(
                 Text(entry.expression, style = MaterialTheme.typography.titleMedium)
                 if (entry.reading.isNotBlank() && entry.reading != entry.expression) {
                     Text(
-                        entry.reading,
+                        entry.singleReading,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
