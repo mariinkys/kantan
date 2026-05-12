@@ -85,6 +85,23 @@ class CustomListsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun addMultipleEntry(
+        listId: Int,
+        sequenceIds: List<Int>
+    ) {
+        dataStore.edit { prefs ->
+            val current = decode(prefs[KEY])
+            prefs[KEY] = encode(current.map { list ->
+                if (list.id == listId) {
+                    val updated = (list.sequences + sequenceIds).distinct()
+                    list.copy(sequences = updated)
+                } else {
+                    list
+                }
+            })
+        }
+    }
+
     override suspend fun removeEntry(listId: Int, sequenceId: Int) {
         dataStore.edit { prefs ->
             val current = decode(prefs[KEY])
