@@ -2,6 +2,7 @@ package dev.mariinkys.kantan.domain.repository
 
 import dev.mariinkys.kantan.domain.model.CustomList
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
+import dev.mariinkys.kantan.domain.model.StudyState
 import kotlinx.coroutines.flow.Flow
 
 interface CustomListsRepository {
@@ -16,6 +17,9 @@ interface CustomListsRepository {
     suspend fun addEntry(listId: Int, sequenceId: Int)
     suspend fun addMultipleEntry(listId: Int, sequenceIds: List<Int>)
     suspend fun removeEntry(listId: Int, sequenceId: Int)
+
+
+    suspend fun updateStudyState(listId: Int, sequenceId: Int, newState: StudyState)
 
     suspend fun isEntryInList(listId: Int, sequenceId: Int): Boolean
 }
