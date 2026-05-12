@@ -6,9 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,16 +30,19 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.mariinkys.kantan.R
 import dev.mariinkys.kantan.domain.model.DictionaryEntry
 
 @Composable
 fun ListEntriesScreen(
     listName: String,
     onEntryClick: (Int) -> Unit,
+    onStudyClick: () -> Unit,
     onBack: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
@@ -68,15 +73,32 @@ fun ListEntriesScreen(
                 Text(listName, style = MaterialTheme.typography.titleLarge)
             }
 
-            IconButton(
-                onClick = viewModel::refresh,
-                enabled = state !is CustomListDetailsState.Loading
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
             ) {
-                Icon(
-                    Icons.Default.Refresh,
-                    contentDescription = "Refresh list",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                IconButton(
+                    onClick = onStudyClick,
+                    enabled = state !is CustomListDetailsState.Loading
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_study),
+                        contentDescription = "Study list",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.width(3.dp))
+                IconButton(
+                    onClick = viewModel::refresh,
+                    enabled = state !is CustomListDetailsState.Loading
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Refresh list",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 

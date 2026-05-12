@@ -50,6 +50,7 @@ import dev.mariinkys.kantan.ui.AboutScreen
 import dev.mariinkys.kantan.ui.KanaTablesScreen
 import dev.mariinkys.kantan.ui.customLists.CustomListsScreen
 import dev.mariinkys.kantan.ui.customLists.details.ListEntriesScreen
+import dev.mariinkys.kantan.ui.customLists.study.StudySessionScreen
 import dev.mariinkys.kantan.ui.debug.DebugScreen
 import dev.mariinkys.kantan.ui.debug.DebugViewModel
 import dev.mariinkys.kantan.ui.entry.EntryDetailScreen
@@ -90,6 +91,11 @@ sealed class Screen(val route: String) {
 
     data object KanjiDetail : Screen("kanji/{character}") {
         fun createRoute(character: String) = "kanji/${character.enc()}"
+    }
+
+    data object StudySession : Screen("study/{listId}/{listName}") {
+        fun createRoute(listId: Int, listName: String) =
+            "study/$listId/${listName.enc()}"
     }
 }
 
@@ -312,6 +318,7 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                         navArgument("listName") { type = NavType.StringType }
                     )
                 ) { backStack ->
+                    val listId = backStack.arguments?.getInt("listId") ?: 0
                     val listName = backStack.arguments?.getString("listName")?.dec() ?: ""
                     backStack.arguments?.putString("listName", listName)
 
@@ -324,6 +331,13 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                         onEntryClick = { sequence ->
                             if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
                                 navController.navigate(Screen.EntryDetail.createRoute(sequence))
+                            }
+                        },
+                        onStudyClick = {
+                            if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) {
+                                navController.navigate(
+                                    Screen.StudySession.createRoute(listId, listName)
+                                )
                             }
                         },
                         onBack = {
@@ -410,6 +424,24 @@ fun AppNavigation(modifier: Modifier = Modifier) {
                             .fillMaxSize()
                             .padding(innerPadding),
                         onMenuClick = { scope.launch { drawerState.open() } })
+                }
+
+                composable(
+                    route = Screen.StudySession.route,
+                    arguments = listOf(
+                        navArgument("listId") { type = NavType.IntType },
+                        navArgument("listName") { type = NavType.StringType }
+                    )
+                ) { backStack ->
+                    val listName = backStack.arguments?.getString("listName")?.dec() ?: ""
+
+                    StudySessionScreen(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        listName = listName,
+                        onBack = { if (backStack.lifecycle.currentState == Lifecycle.State.RESUMED) navController.popBackStack() }
+                    )
                 }
 
                 composable(Screen.Debug.route) {
